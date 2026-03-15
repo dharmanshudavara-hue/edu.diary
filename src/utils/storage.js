@@ -1,19 +1,60 @@
 // ─── LocalStorage Helpers ───
 
-const STORAGE_KEY = 'studentDiary';
+const ACTIVE_USER_KEY = 'studentDiary_active_user';
 
-export function getData() {
+export function getActiveUsername() {
+    return localStorage.getItem(ACTIVE_USER_KEY);
+}
+
+export function setActiveUser(username) {
+    if (username) {
+        localStorage.setItem(ACTIVE_USER_KEY, username);
+    } else {
+        localStorage.removeItem(ACTIVE_USER_KEY);
+    }
+}
+
+function getStorageKey() {
+    const active = getActiveUsername();
+    return active ? `studentDiary_${active}` : 'studentDiary_guest';
+}
+
+export function getData(username) {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const key = username ? `studentDiary_${username}` : getStorageKey();
+        const raw = localStorage.getItem(key);
         return raw ? JSON.parse(raw) : null;
     } catch {
         return null;
     }
 }
 
-export function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export function saveData(data, username) {
+    const key = username ? `studentDiary_${username}` : getStorageKey();
+    localStorage.setItem(key, JSON.stringify(data));
 }
+
+// ─── Data Migration for Existing Users ───
+export function migrateOldData() {
+    try {
+        const oldRaw = localStorage.getItem('studentDiary');
+        if (oldRaw) {
+            const oldData = JSON.parse(oldRaw);
+            const user = oldData.user?.username;
+            if (user && !localStorage.getItem(`studentDiary_${user}`)) {
+                // Move it to new multi-tenant slot
+                localStorage.setItem(`studentDiary_${user}`, JSON.stringify(oldData));
+            }
+            // Remove the old global one to keep things clean
+            localStorage.removeItem('studentDiary');
+        }
+    } catch (e) {
+        console.warn("Migration failed:", e);
+    }
+}
+
+// Call this immediately on script load
+migrateOldData();
 
 export function getUser() {
     const d = getData();
@@ -85,8 +126,13 @@ export function setOnboarded(val) {
     saveData(d);
 }
 
+export function logoutUser() {
+    setActiveUser(null);
+}
+
 export function clearData() {
-    localStorage.removeItem(STORAGE_KEY);
+    const key = getStorageKey();
+    localStorage.removeItem(key);
 }
 
 export function todayStr() {

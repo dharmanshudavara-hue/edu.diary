@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { getUser, clearData } from '../utils/storage';
+import { getUser, logoutUser } from '../utils/storage';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -18,7 +18,7 @@ export default function Navbar() {
   }, []);
 
   function logout() {
-    clearData();
+    logoutUser();
     navigate('/login');
   }
 

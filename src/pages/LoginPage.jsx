@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { saveUser, getData, clearData } from '../utils/storage';
+import { saveUser, getData, clearData, setActiveUser } from '../utils/storage';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -9,10 +9,6 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  // Check if there's a previous user with incomplete setup
-  const existing = getData();
-  const hasStaleUser = existing?.user?.username && !existing?.onboarded;
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -23,20 +19,34 @@ export default function LoginPage() {
       return;
     }
 
-    // Check if returning user with completed setup
-    if (existing?.user?.username && existing?.onboarded) {
-      if (existing.user.username === username.trim() && existing.user.password === password) {
-        navigate('/dashboard');
+    const un = username.trim();
+
+    // Check if this specific user exists in their multi-tenant slot
+    const existing = getData(un);
+
+    if (existing?.user?.username === un) {
+      if (existing.user.password === password) {
+        // Correct password, switch context and log them in
+        setActiveUser(un);
+
+        if (existing.onboarded) {
+          navigate('/dashboard');
+        } else {
+          navigate('/onboarding');
+        }
         return;
-      } else if (existing.user.username === username.trim()) {
+      } else {
+        // Wrong password for an existing locally stored account
         setError('Wrong password! Try again 🤔');
         return;
       }
     }
 
-    // New user or different username — clear old data and start fresh
+    // New user entirely on this machine
+    setActiveUser(un);
+    // Clear out this specific user's slot just in case it had weird partial data
     clearData();
-    saveUser({ username: username.trim(), password, name: '', branch: '' });
+    saveUser({ username: un, password, name: '', branch: '' });
     navigate('/onboarding');
   }
 
@@ -72,15 +82,6 @@ export default function LoginPage() {
           <span className="hd-underline" style={{ marginBottom: 20 }} />
 
           {error && <div className="login-error">{error}</div>}
-
-          {hasStaleUser && (
-            <div className="login-stale-notice">
-              <span>Previous session found for <strong>{existing.user.username}</strong></span>
-              <button className="login-clear-btn" type="button" onClick={handleClearAndRestart}>
-                Clear & start fresh
-              </button>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit}>
             <div className="login-field">
