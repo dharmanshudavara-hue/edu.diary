@@ -1,0 +1,110 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Patrick+Hand&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .page {
+    min-height: 560px;
+    background-color: #fdfbf7;
+    background-image: radial-gradient(#e5e0d8 1px, transparent 1px);
+    background-size: 24px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Patrick Hand', cursive;
+    padding: 40px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .deco-blob { position: absolute; border: 2px dashed #e5e0d8; pointer-events: none; }
+  .blob1 { width: 180px; height: 180px; border-radius: 62% 38% 70% 30% / 44% 58% 42% 56%; top: -40px; left: -40px; }
+  .blob2 { width: 140px; height: 140px; border-radius: 38% 62% 30% 70% / 58% 44% 56% 42%; bottom: -30px; right: -30px; }
+  .blob3 { width: 80px; height: 80px; border-radius: 50%; border: 3px dashed #ff4d4d; top: 60px; right: 60px; animation: bounce 3s ease-in-out infinite; }
+  .star { position: absolute; font-family: 'Kalam', cursive; font-size: 28px; color: #ff4d4d; transform: rotate(-15deg); bottom: 80px; left: 50px; animation: wiggle 4s ease-in-out infinite; }
+  .scribble-arrow { position: absolute; top: 100px; left: 30px; width: 80px; opacity: 0.4; }
+  @keyframes bounce { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(5deg); } }
+  @keyframes wiggle { 0%, 100% { transform: rotate(-15deg); } 50% { transform: rotate(-5deg); } }
+  .card {
+    background: #fff;
+    border: 3px solid #2d2d2d;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    box-shadow: 8px 8px 0px 0px #2d2d2d;
+    padding: 40px 36px 36px;
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    transform: rotate(-0.5deg);
+  }
+  .tape { position: absolute; top: -14px; left: 50%; transform: translateX(-50%) rotate(-2deg); width: 80px; height: 28px; background: rgba(200,190,180,0.45); border-radius: 3px; border: 1px solid rgba(150,140,130,0.3); }
+  .tack { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #ff4d4d; border: 2px solid #2d2d2d; top: -8px; right: 40px; box-shadow: 1px 1px 0px #2d2d2d; }
+  .sticky-note { position: absolute; background: #fff9c4; border: 2px solid #2d2d2d; border-radius: 4px 255px 4px 4px / 4px 4px 4px 225px; padding: 4px 10px; font-family: 'Kalam', cursive; font-size: 12px; color: #2d2d2d; transform: rotate(4deg); top: 12px; right: -18px; box-shadow: 3px 3px 0 #2d2d2d; white-space: nowrap; }
+  .card-title { font-family: 'Kalam', cursive; font-weight: 700; font-size: 32px; color: #2d2d2d; text-align: center; margin-top: 12px; margin-bottom: 4px; line-height: 1.1; }
+  .card-subtitle { font-family: 'Patrick Hand', cursive; font-size: 15px; color: #2d2d2d; opacity: 0.55; text-align: center; margin-bottom: 28px; }
+  .underline-deco { display: block; width: 80px; height: 6px; background: #ff4d4d; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; margin: 0 auto 24px; }
+  .label { font-family: 'Patrick Hand', cursive; font-size: 15px; color: #2d2d2d; margin-bottom: 6px; display: block; }
+  .input-wrap { position: relative; margin-bottom: 20px; }
+  .input-field { width: 100%; padding: 12px 16px; font-family: 'Patrick Hand', cursive; font-size: 16px; color: #2d2d2d; background: #fdfbf7; border: 2px solid #2d2d2d; border-radius: 225px 15px 255px 15px / 15px 255px 15px 225px; outline: none; transition: all 0.15s; box-shadow: 3px 3px 0px 0px rgba(45,45,45,0.12); }
+  .input-field::placeholder { color: rgba(45,45,45,0.35); font-family: 'Patrick Hand', cursive; }
+  .input-field:focus { border-color: #2d5da1; box-shadow: 3px 3px 0px 0px rgba(45,93,161,0.2); }
+  .forgot { font-family: 'Patrick Hand', cursive; font-size: 13px; color: #2d5da1; text-decoration: none; display: block; text-align: right; position: relative; }
+  .forgot::after { content: ''; display: block; height: 2px; background: #2d5da1; border-radius: 2px; width: 0; transition: width 0.2s; }
+  .forgot:hover::after { width: 100%; }
+  .btn-primary { width: 100%; padding: 14px 20px; font-family: 'Patrick Hand', cursive; font-size: 18px; color: #2d2d2d; background: #fff; border: 3px solid #2d2d2d; border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px; box-shadow: 4px 4px 0px 0px #2d2d2d; cursor: pointer; transition: all 0.1s; }
+  .btn-primary:hover { background: #ff4d4d; color: #fff; box-shadow: 2px 2px 0px 0px #2d2d2d; transform: translate(2px, 2px); }
+  .btn-primary:active { box-shadow: none; transform: translate(4px, 4px); }
+  .checkbox-row { display: flex; align-items: center; gap: 10px; }
+  .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #ff4d4d; cursor: pointer; }
+  .checkbox-row label { font-family: 'Patrick Hand', cursive; font-size: 14px; color: rgba(45,45,45,0.7); cursor: pointer; }
+  .eye-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: rgba(45,45,45,0.4); font-size: 18px; padding: 0; line-height: 1; }
+</style>
+
+<div class="page">
+  <div class="deco-blob blob1"></div>
+  <div class="deco-blob blob2"></div>
+  <div class="deco-blob blob3"></div>
+  <div class="star">★</div>
+  <svg class="scribble-arrow" viewBox="0 0 80 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10 50 Q30 10 65 20" stroke="#2d2d2d" stroke-width="2" stroke-dasharray="4 3" fill="none"/>
+    <path d="M55 14 L68 22 L57 30" stroke="#2d2d2d" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </svg>
+
+  <div class="card">
+    <div class="tape"></div>
+    <div class="tack"></div>
+    <div class="sticky-note">welcome back!</div>
+
+    <div class="card-title">Sign in ✏️</div>
+    <div class="card-subtitle">grab your pencil, let's go</div>
+    <span class="underline-deco"></span>
+
+    <div class="input-wrap">
+      <label class="label" for="username">Username</label>
+      <input class="input-field" type="text" id="username" placeholder="e.g. U25EE102" autocomplete="username" />
+    </div>
+
+    <div class="input-wrap">
+      <label class="label" for="password">Password</label>
+      <div style="position:relative;">
+        <input class="input-field" type="password" id="password" placeholder="••••••••" style="padding-right:44px;" />
+        <button class="eye-btn" onclick="togglePw(this)" title="Show password">👁</button>
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; margin-top:-4px;">
+      <div class="checkbox-row">
+        <input type="checkbox" id="remember" />
+        <label for="remember">Remember me</label>
+      </div>
+      <a href="#" class="forgot">Forgot password?</a>
+    </div>
+
+    <button class="btn-primary">Log in →</button>
+  </div>
+</div>
+
+<script>
+function togglePw(btn) {
+  const input = btn.previousElementSibling;
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+  else { input.type = 'password'; btn.textContent = '👁'; }
+}
+</script>

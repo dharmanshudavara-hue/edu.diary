@@ -1,0 +1,356 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Patrick+Hand&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .hd-page {
+    min-height: 520px;
+    background-color: #fdfbf7;
+    background-image: radial-gradient(#e5e0d8 1px, transparent 1px);
+    background-size: 24px 24px;
+    font-family: 'Patrick Hand', cursive;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* NAV BAR */
+  .hd-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: #fff;
+    border-bottom: 3px solid #2d2d2d;
+    box-shadow: 0 4px 0px 0px #2d2d2d;
+    position: relative;
+    z-index: 10;
+  }
+  .hd-brand {
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    font-size: 22px;
+    color: #2d2d2d;
+    letter-spacing: -0.5px;
+  }
+  .hd-brand span { color: #ff4d4d; }
+
+  .hd-nav-links {
+    display: flex;
+    gap: 24px;
+    list-style: none;
+  }
+  .hd-nav-links a {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 15px;
+    color: #2d2d2d;
+    text-decoration: none;
+    opacity: 0.65;
+    transition: opacity 0.15s;
+  }
+  .hd-nav-links a:hover { opacity: 1; }
+
+  /* USER ICON BUTTON */
+  .hd-user-wrap {
+    position: relative;
+  }
+  .hd-user-btn {
+    width: 44px; height: 44px;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    border: 3px solid #2d2d2d;
+    background: #fff9c4;
+    box-shadow: 3px 3px 0px 0px #2d2d2d;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    font-size: 16px;
+    color: #2d2d2d;
+    transition: all 0.1s;
+    position: relative;
+  }
+  .hd-user-btn:hover {
+    background: #ff4d4d;
+    color: #fff;
+    box-shadow: 2px 2px 0px 0px #2d2d2d;
+    transform: translate(1px, 1px);
+  }
+  .hd-user-btn:active {
+    box-shadow: none;
+    transform: translate(3px, 3px);
+  }
+  .hd-online-dot {
+    position: absolute;
+    bottom: -3px; right: -3px;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid #fff;
+  }
+
+  /* DROPDOWN */
+  .hd-dropdown {
+    position: absolute;
+    top: calc(100% + 14px);
+    right: 0;
+    width: 260px;
+    background: #fff;
+    border: 3px solid #2d2d2d;
+    border-radius: 15px 255px 15px 225px / 225px 15px 255px 15px;
+    box-shadow: 6px 6px 0px 0px #2d2d2d;
+    z-index: 100;
+    transform: rotate(0.5deg);
+    overflow: visible;
+  }
+  .hd-dropdown.hidden { display: none; }
+
+  .hd-dd-tape {
+    position: absolute;
+    top: -13px; left: 50%;
+    transform: translateX(-50%) rotate(2deg);
+    width: 60px; height: 24px;
+    background: rgba(200,190,180,0.5);
+    border-radius: 3px;
+    border: 1px solid rgba(150,140,130,0.3);
+  }
+  .hd-dd-tack {
+    position: absolute;
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: #2d5da1;
+    border: 2px solid #2d2d2d;
+    top: -7px; left: 20px;
+    box-shadow: 1px 1px 0px #2d2d2d;
+  }
+
+  /* Profile header inside dropdown */
+  .hd-dd-header {
+    padding: 20px 18px 14px;
+    border-bottom: 2px dashed #e5e0d8;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hd-avatar-lg {
+    width: 52px; height: 52px;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    border: 3px solid #2d2d2d;
+    background: #fff9c4;
+    box-shadow: 3px 3px 0px 0px #2d2d2d;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    font-size: 20px;
+    color: #2d2d2d;
+    flex-shrink: 0;
+  }
+  .hd-dd-name {
+    font-family: 'Kalam', cursive;
+    font-weight: 700;
+    font-size: 17px;
+    color: #2d2d2d;
+    line-height: 1.2;
+  }
+  .hd-dd-id {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 12px;
+    color: #2d2d2d;
+    opacity: 0.5;
+    margin-top: 2px;
+  }
+  .hd-dd-badge {
+    display: inline-block;
+    margin-top: 5px;
+    padding: 2px 8px;
+    background: #fff9c4;
+    border: 1.5px solid #2d2d2d;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 11px;
+    color: #2d2d2d;
+  }
+
+  /* Menu items */
+  .hd-dd-menu {
+    padding: 10px 0;
+    list-style: none;
+  }
+  .hd-dd-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 15px;
+    color: #2d2d2d;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-decoration: none;
+  }
+  .hd-dd-item:hover {
+    background: #fdfbf7;
+    padding-left: 22px;
+  }
+  .hd-dd-item-icon {
+    width: 28px; height: 28px;
+    border-radius: 225px 15px 255px 15px / 15px 255px 15px 225px;
+    border: 2px solid #2d2d2d;
+    background: #e5e0d8;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    box-shadow: 2px 2px 0 #2d2d2d;
+  }
+  .hd-dd-item:hover .hd-dd-item-icon {
+    background: #2d5da1;
+  }
+
+  .hd-dd-divider {
+    border: none;
+    border-top: 2px dashed #e5e0d8;
+    margin: 6px 18px;
+  }
+
+  .hd-dd-logout {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px 16px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 15px;
+    color: #ff4d4d;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .hd-dd-logout:hover { padding-left: 22px; }
+  .hd-dd-logout .hd-dd-item-icon {
+    background: #fff0f0;
+    border-color: #ff4d4d;
+    box-shadow: 2px 2px 0 #ff4d4d;
+  }
+  .hd-dd-logout:hover .hd-dd-item-icon {
+    background: #ff4d4d;
+  }
+
+  /* Page content */
+  .hd-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0.35;
+  }
+  .hd-content-text {
+    font-family: 'Kalam', cursive;
+    font-size: 22px;
+    color: #2d2d2d;
+  }
+  .hd-content-sub {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 14px;
+    color: #2d2d2d;
+  }
+
+  .hd-arrow-hint {
+    position: absolute;
+    top: 70px; right: 90px;
+    width: 70px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+</style>
+
+<div class="hd-page">
+
+  <!-- Navbar -->
+  <div class="hd-navbar">
+    <div class="hd-brand">sketch<span>.</span>io</div>
+
+    <ul class="hd-nav-links">
+      <li><a href="#">Home</a></li>
+      <li><a href="#">Dashboard</a></li>
+      <li><a href="#">Projects</a></li>
+    </ul>
+
+    <div class="hd-user-wrap">
+      <button class="hd-user-btn" id="userBtn" onclick="toggleDropdown()">
+        U
+        <div class="hd-online-dot"></div>
+      </button>
+
+      <div class="hd-dropdown" id="dropdown">
+        <div class="hd-dd-tape"></div>
+        <div class="hd-dd-tack"></div>
+
+        <!-- Profile header -->
+        <div class="hd-dd-header">
+          <div class="hd-avatar-lg">U</div>
+          <div>
+            <div class="hd-dd-name">Dharmanshu</div>
+            <div class="hd-dd-id">U25EE102</div>
+            <div class="hd-dd-badge">✏️ Student</div>
+          </div>
+        </div>
+
+        <!-- Menu -->
+        <ul class="hd-dd-menu">
+          <li>
+            <a href="#" class="hd-dd-item">
+              <div class="hd-dd-item-icon">👤</div>
+              My Profile
+            </a>
+          </li>
+          <li>
+            <a href="#" class="hd-dd-item">
+              <div class="hd-dd-item-icon">📋</div>
+              My Courses
+            </a>
+          </li>
+          <li>
+            <a href="#" class="hd-dd-item">
+              <div class="hd-dd-item-icon">⚙️</div>
+              Settings
+            </a>
+          </li>
+        </ul>
+
+        <hr class="hd-dd-divider" />
+
+        <div class="hd-dd-logout" onclick="toggleDropdown()">
+          <div class="hd-dd-item-icon">🚪</div>
+          Log out
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Arrow hint -->
+  <svg class="hd-arrow-hint" viewBox="0 0 70 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M60 50 Q40 30 10 15" stroke="#2d2d2d" stroke-width="2" stroke-dasharray="4 3" fill="none"/>
+    <path d="M16 8 L8 18 L20 20" stroke="#2d2d2d" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </svg>
+
+  <!-- Page placeholder -->
+  <div class="hd-content">
+    <div class="hd-content-text">your dashboard ✏️</div>
+    <div class="hd-content-sub">click the user icon above →</div>
+  </div>
+
+</div>
+
+<script>
+  function toggleDropdown() {
+    const dd = document.getElementById('dropdown');
+    dd.classList.toggle('hidden');
+  }
+  document.getElementById('dropdown').classList.add('hidden');
+
+  document.addEventListener('click', function(e) {
+    const btn = document.getElementById('userBtn');
+    const dd = document.getElementById('dropdown');
+    if (!btn.contains(e.target) && !dd.contains(e.target)) {
+      dd.classList.add('hidden');
+    }
+  });
+</script>
