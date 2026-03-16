@@ -14,16 +14,15 @@ export default function AttendancePopup() {
 
     useEffect(() => {
         // Check if popup should show
-        const settings = getSettings();
         const attendance = getAttendance();
         const alreadyRecorded = attendance.some(r => r.date === today);
 
-        if (!alreadyRecorded && settings.lastPopupDate !== today && todayClasses.length > 0) {
+        if (!alreadyRecorded && todayClasses.length > 0) {
             // Small delay so dashboard renders first
             const timer = setTimeout(() => setShow(true), 800);
             return () => clearTimeout(timer);
         }
-    }, []);
+    }, [today, todayClasses, show]); // Added dependencies to be safe
 
     function toggleExcept(courseId) {
         setExceptList(prev =>
@@ -71,7 +70,6 @@ export default function AttendancePopup() {
     }
 
     function dismiss() {
-        saveSettings({ lastPopupDate: today });
         setShow(false);
     }
 
