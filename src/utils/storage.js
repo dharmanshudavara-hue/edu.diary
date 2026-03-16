@@ -169,5 +169,9 @@ export function isAttendancePopupDismissed() {
 }
 
 export function setAttendancePopupDismissed(val) {
-    sessionStorage.setItem(POPUP_DISMISSED_KEY, val ? 'true' : 'false');
+    if (val) {
+        sessionStorage.setItem(POPUP_DISMISSED_KEY, 'true');
+    } else {
+        sessionStorage.removeItem(POPUP_DISMISSED_KEY);
+    }
 }

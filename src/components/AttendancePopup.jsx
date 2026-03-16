@@ -13,18 +13,21 @@ export default function AttendancePopup() {
     const today = todayStr();
 
     useEffect(() => {
-        // Check if popup should show after a delay
+        // Only run this check once when the component mounts (on a new page visit/refresh)
         const timer = setTimeout(() => {
             const attendance = getAttendance();
             const alreadyRecorded = attendance.some(r => r.date === today);
 
-            if (!alreadyRecorded && !isAttendancePopupDismissed() && todayClasses.length > 0) {
+            // Re-check dismissal flag inside timeout for extra safety
+            const dismissed = isAttendancePopupDismissed();
+
+            if (!alreadyRecorded && !dismissed && todayClasses.length > 0) {
                 setShow(true);
             }
         }, 800);
 
         return () => clearTimeout(timer);
-    }, [today, todayClasses.length]); // Re-run if day or number of classes changes
+    }, [today]); // Re-run only if the day turns over
 
     function toggleExcept(courseId) {
         setExceptList(prev =>
