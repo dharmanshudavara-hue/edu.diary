@@ -161,17 +161,13 @@ export function getTodayClasses() {
     const day = getTodayDay();
     return tt[day] || [];
 }
-// Session-level flags (resets on refresh or tab close)
-const POPUP_DISMISSED_KEY = 'attendance_popup_dismissed';
+// Session-level flags (resets on refresh)
+let attendancePopupDismissed = false;
 
 export function isAttendancePopupDismissed() {
-    return sessionStorage.getItem(POPUP_DISMISSED_KEY) === 'true';
+    return attendancePopupDismissed;
 }
 
 export function setAttendancePopupDismissed(val) {
-    if (val) {
-        sessionStorage.setItem(POPUP_DISMISSED_KEY, 'true');
-    } else {
-        sessionStorage.removeItem(POPUP_DISMISSED_KEY);
-    }
+    attendancePopupDismissed = !!val;
 }
