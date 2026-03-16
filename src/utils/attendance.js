@@ -8,8 +8,11 @@ import { getAttendance, getCourses } from './storage';
  */
 export function calculateAttendance(courseId) {
     const records = getAttendance();
-    let attended = 0;
-    let total = 0;
+    const courses = getCourses();
+    const course = courses.find(c => c.id === courseId);
+
+    let attended = course?.manualAttended || 0;
+    let total = course?.manualTotal || 0;
 
     for (const record of records) {
         for (const entry of record.entries) {

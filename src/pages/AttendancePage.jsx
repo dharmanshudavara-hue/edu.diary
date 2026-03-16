@@ -1,12 +1,36 @@
+import { useState } from 'react';
 import Layout from '../components/Layout';
-import { getCourses, getAttendance } from '../utils/storage';
+import { getCourses, getAttendance, saveCourses } from '../utils/storage';
 import { calculateAllAttendance, calculateOverallAttendance, predictSkippable, predictRequired, getAttColor, getBarColor } from '../utils/attendance';
 
 export default function AttendancePage() {
-    const courses = getCourses();
+    const [courses, setCoursesState] = useState(getCourses());
+    const [editingCourse, setEditingCourse] = useState(null); // Course being edited
+    const [editForm, setEditForm] = useState({ attended: 0, total: 0 });
+
     const allStats = calculateAllAttendance();
     const overall = calculateOverallAttendance();
     const attendance = getAttendance();
+
+    function handleEdit(course) {
+        setEditingCourse(course);
+        setEditForm({
+            attended: course.manualAttended || 0,
+            total: course.manualTotal || 0
+        });
+    }
+
+    function handleSave() {
+        if (!editingCourse) return;
+        const updatedCourses = courses.map(c =>
+            c.id === editingCourse.id
+                ? { ...c, manualAttended: parseInt(editForm.attended) || 0, manualTotal: parseInt(editForm.total) || 0 }
+                : c
+        );
+        saveCourses(updatedCourses);
+        setCoursesState(updatedCourses);
+        setEditingCourse(null);
+    }
 
     return (
         <Layout>
@@ -54,7 +78,16 @@ export default function AttendancePage() {
                                             <div className="att-course-name">{c.name}</div>
                                             <div className="hd-badge">{c.code}</div>
                                         </div>
-                                        <div className={`att-course-pct ${getAttColor(s.percentage)}`}>{s.percentage}%</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                            <div className={`att-course-pct ${getAttColor(s.percentage)}`}>{s.percentage}%</div>
+                                            <button
+                                                className="hd-btn hd-btn--sm"
+                                                style={{ marginTop: 8, fontSize: 11, padding: '4px 8px' }}
+                                                onClick={() => handleEdit(c)}
+                                            >
+                                                Edit ✏️
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="att-bar" style={{ marginTop: 12 }}>
@@ -63,12 +96,17 @@ export default function AttendancePage() {
 
                                     <div className="att-course-detail">
                                         {s.attended} / {s.total} classes attended
+                                        {(c.manualAttended > 0 || c.manualTotal > 0) && (
+                                            <span style={{ marginLeft: 6, opacity: 0.8 }} title="Manual addition included">
+                                                (incl. {c.manualAttended}/{c.manualTotal} manual)
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="att-predict">
                                         {s.total === 0 ? (
                                             <div className="att-predict-item att-predict-info">
-                                                📝 No data yet — mark attendance from the daily popup
+                                                📝 No data yet — mark attendance or add manually
                                             </div>
                                         ) : s.percentage >= 75 ? (
                                             <div className="att-predict-item att-predict-good">
@@ -83,6 +121,46 @@ export default function AttendancePage() {
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+
+                {/* Manual Attendance Modal */}
+                {editingCourse && (
+                    <div className="hd-overlay" onClick={() => setEditingCourse(null)}>
+                        <div className="hd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 400 }}>
+                            <div className="hd-tape" />
+                            <h2 style={{ marginBottom: 8, fontSize: 24 }}>Edit Attendance</h2>
+                            <p className="hd-text-muted" style={{ marginBottom: 20 }}>
+                                {editingCourse.name} ({editingCourse.code})
+                                <br />
+                                <small>Add classes attended outside the app logging</small>
+                            </p>
+
+                            <div style={{ marginBottom: 16 }}>
+                                <label className="hd-label">Manual Classes Attended</label>
+                                <input
+                                    type="number"
+                                    className="hd-input"
+                                    value={editForm.attended}
+                                    onChange={e => setEditForm({ ...editForm, attended: e.target.value })}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: 24 }}>
+                                <label className="hd-label">Manual Total Classes</label>
+                                <input
+                                    type="number"
+                                    className="hd-input"
+                                    value={editForm.total}
+                                    onChange={e => setEditForm({ ...editForm, total: e.target.value })}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                                <button className="hd-btn hd-btn--secondary" onClick={() => setEditingCourse(null)}>Cancel</button>
+                                <button className="hd-btn" onClick={handleSave}>Save Changes</button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
