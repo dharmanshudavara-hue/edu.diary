@@ -22,7 +22,7 @@ export default function AttendancePopup() {
             const timer = setTimeout(() => setShow(true), 800);
             return () => clearTimeout(timer);
         }
-    }, [today, todayClasses, show]); // Added dependencies to be safe
+    }, [today, todayClasses]); // Removed 'show' to prevent immediate re-triggering within the same session
 
     function toggleExcept(courseId) {
         setExceptList(prev =>
