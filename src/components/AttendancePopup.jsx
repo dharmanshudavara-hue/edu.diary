@@ -13,17 +13,18 @@ export default function AttendancePopup() {
     const today = todayStr();
 
     useEffect(() => {
-        // Check if popup should show
-        const attendance = getAttendance();
-        const alreadyRecorded = attendance.some(r => r.date === today);
+        // Check if popup should show after a delay
+        const timer = setTimeout(() => {
+            const attendance = getAttendance();
+            const alreadyRecorded = attendance.some(r => r.date === today);
 
-        // Show only if not already recorded, not dismissed in this session, and has classes
-        if (!alreadyRecorded && !isAttendancePopupDismissed() && todayClasses.length > 0) {
-            // Small delay so dashboard renders first
-            const timer = setTimeout(() => setShow(true), 800);
-            return () => clearTimeout(timer);
-        }
-    }, [today, todayClasses.length]); // Use length to avoid re-triggering on every render if array reference changes
+            if (!alreadyRecorded && !isAttendancePopupDismissed() && todayClasses.length > 0) {
+                setShow(true);
+            }
+        }, 800);
+
+        return () => clearTimeout(timer);
+    }, [today, todayClasses.length]); // Re-run if day or number of classes changes
 
     function toggleExcept(courseId) {
         setExceptList(prev =>

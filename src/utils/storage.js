@@ -161,13 +161,13 @@ export function getTodayClasses() {
     const day = getTodayDay();
     return tt[day] || [];
 }
-// Session-level flags (resets on refresh)
-let attendancePopupDismissed = false;
+// Session-level flags (resets on refresh or tab close)
+const POPUP_DISMISSED_KEY = 'attendance_popup_dismissed';
 
 export function isAttendancePopupDismissed() {
-    return attendancePopupDismissed;
+    return sessionStorage.getItem(POPUP_DISMISSED_KEY) === 'true';
 }
 
 export function setAttendancePopupDismissed(val) {
-    attendancePopupDismissed = val;
+    sessionStorage.setItem(POPUP_DISMISSED_KEY, val ? 'true' : 'false');
 }
