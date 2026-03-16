@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCourses, getTodayClasses, getAttendance, saveAttendance, getSettings, saveSettings, todayStr } from '../utils/storage';
+import { getCourses, getTodayClasses, getAttendance, saveAttendance, getSettings, saveSettings, todayStr, isAttendancePopupDismissed, setAttendancePopupDismissed } from '../utils/storage';
 
 export default function AttendancePopup() {
     const [show, setShow] = useState(false);
@@ -17,12 +17,13 @@ export default function AttendancePopup() {
         const attendance = getAttendance();
         const alreadyRecorded = attendance.some(r => r.date === today);
 
-        if (!alreadyRecorded && todayClasses.length > 0) {
+        // Show only if not already recorded, not dismissed in this session, and has classes
+        if (!alreadyRecorded && !isAttendancePopupDismissed() && todayClasses.length > 0) {
             // Small delay so dashboard renders first
             const timer = setTimeout(() => setShow(true), 800);
             return () => clearTimeout(timer);
         }
-    }, [today, todayClasses]); // Removed 'show' to prevent immediate re-triggering within the same session
+    }, [today, todayClasses.length]); // Use length to avoid re-triggering on every render if array reference changes
 
     function toggleExcept(courseId) {
         setExceptList(prev =>
@@ -70,6 +71,7 @@ export default function AttendancePopup() {
     }
 
     function dismiss() {
+        setAttendancePopupDismissed(true);
         setShow(false);
     }
 

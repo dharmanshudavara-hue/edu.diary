@@ -161,3 +161,13 @@ export function getTodayClasses() {
     const day = getTodayDay();
     return tt[day] || [];
 }
+// Session-level flags (resets on refresh)
+let attendancePopupDismissed = false;
+
+export function isAttendancePopupDismissed() {
+    return attendancePopupDismissed;
+}
+
+export function setAttendancePopupDismissed(val) {
+    attendancePopupDismissed = val;
+}
