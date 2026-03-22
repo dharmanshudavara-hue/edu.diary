@@ -1,6 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUser, saveUser, saveCourses, saveTimetable, setOnboarded, DAYS, DAY_LABELS } from '../utils/storage';
+import avatar1 from '../assets/avatars/avatar1.png';
+import avatar2 from '../assets/avatars/avatar2.png';
+import avatar3 from '../assets/avatars/avatar3.png';
+import avatar4 from '../assets/avatars/avatar4.png';
+import avatar5 from '../assets/avatars/avatar5.png';
+
+const AVATARS = [
+    { id: 'av1', img: avatar1 },
+    { id: 'av2', img: avatar2 },
+    { id: 'av3', img: avatar3 },
+    { id: 'av4', img: avatar4 },
+    { id: 'av5', img: avatar5 },
+];
+
 
 export default function OnboardingPage() {
     const navigate = useNavigate();
@@ -10,6 +24,8 @@ export default function OnboardingPage() {
     // Step 1: Personal info
     const [name, setName] = useState(user?.name || '');
     const [branch, setBranch] = useState(user?.branch || '');
+    const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || 'av1');
+
 
     // Step 2: Courses
     const [courses, setCourses] = useState([{ id: genId(), name: '', code: '' }]);
@@ -60,7 +76,7 @@ export default function OnboardingPage() {
     function handleNext() {
         if (step === 1) {
             if (!name.trim() || !branch.trim()) return;
-            saveUser({ ...user, name: name.trim(), branch: branch.trim() });
+            saveUser({ ...user, name: name.trim(), branch: branch.trim(), avatar: selectedAvatar });
             setStep(2);
         } else if (step === 2) {
             const valid = courses.filter(c => c.name.trim() && c.code.trim());
@@ -122,6 +138,22 @@ export default function OnboardingPage() {
                                     value={branch}
                                     onChange={e => setBranch(e.target.value)}
                                 />
+                            </div>
+
+                            <div className="onb-field">
+                                <label className="hd-label">Pick an Avatar</label>
+                                <div className="onb-avatars">
+                                    {AVATARS.map(av => (
+                                        <div
+                                            key={av.id}
+                                            className={`onb-avatar-item ${selectedAvatar === av.id ? 'onb-avatar-item--active' : ''}`}
+                                            onClick={() => setSelectedAvatar(av.id)}
+                                        >
+                                            <img src={av.img} alt="Avatar" className="onb-avatar-img" />
+                                            {selectedAvatar === av.id && <div className="onb-avatar-check">✓</div>}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -307,6 +339,55 @@ const styles = `
 .onb-remove-btn:hover {
   background: var(--accent);
   color: var(--white);
+}
+.onb-avatars {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 10px 0;
+  flex-wrap: wrap;
+}
+.onb-avatar-item {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-wobbly);
+  border: 3px solid var(--border);
+  background: var(--postit);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.onb-avatar-item:hover {
+  transform: scale(1.1) rotate(3deg);
+  border-color: var(--accent);
+}
+.onb-avatar-item--active {
+  border-color: var(--accent);
+  transform: scale(1.1) rotate(-3deg);
+  box-shadow: 0 0 15px rgba(255, 77, 77, 0.3);
+}
+.onb-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.onb-avatar-check {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  background: var(--accent);
+  color: var(--white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  border: 2px solid var(--border);
+  font-weight: bold;
 }
 .onb-tt-wrap {
   display: flex;

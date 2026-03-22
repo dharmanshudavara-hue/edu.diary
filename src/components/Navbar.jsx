@@ -1,6 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { getUser, logoutUser } from '../utils/storage';
+import avatar1 from '../assets/avatars/avatar1.png';
+import avatar2 from '../assets/avatars/avatar2.png';
+import avatar3 from '../assets/avatars/avatar3.png';
+import avatar4 from '../assets/avatars/avatar4.png';
+import avatar5 from '../assets/avatars/avatar5.png';
+
+const AVATAR_MAP = {
+  av1: avatar1,
+  av2: avatar2,
+  av3: avatar3,
+  av4: avatar4,
+  av5: avatar5,
+};
+
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -8,6 +22,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const user = getUser();
   const initial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+  const avatarImg = user?.avatar ? AVATAR_MAP[user.avatar] : null;
+
 
   useEffect(() => {
     function handleClick(e) {
@@ -36,8 +52,10 @@ export default function Navbar() {
         </ul>
 
         <div className="nav-user-wrap" ref={ref}>
-          <button className="nav-user-btn" onClick={() => setOpen(v => !v)} id="user-avatar-btn">
-            {initial}
+          <button className="nav-user-btn" onClick={() => setOpen(v => !v)} id="user-avatar-btn" style={{ padding: avatarImg ? 0 : '' }}>
+            {avatarImg ? (
+              <img src={avatarImg} alt="Avatar" className="nav-user-img" />
+            ) : initial}
             <div className="nav-online-dot" />
           </button>
 
@@ -47,7 +65,11 @@ export default function Navbar() {
               <div className="nav-dd-tack" />
 
               <div className="nav-dd-header">
-                <div className="nav-avatar-lg">{initial}</div>
+                <div className="nav-avatar-lg" style={{ padding: avatarImg ? 0 : '' }}>
+                   {avatarImg ? (
+                    <img src={avatarImg} alt="Avatar" className="nav-user-img" />
+                   ) : initial}
+                </div>
                 <div>
                   <div className="nav-dd-name">{user?.name || 'Student'}</div>
                   <div className="nav-dd-id">{user?.username || ''}</div>
@@ -165,6 +187,12 @@ const navStyles = `
   color: var(--white);
   box-shadow: 2px 2px 0px 0px var(--border);
   transform: translate(1px, 1px);
+}
+.nav-user-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
 }
 .nav-online-dot {
   position: absolute;

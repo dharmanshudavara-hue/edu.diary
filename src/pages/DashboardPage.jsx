@@ -1,7 +1,31 @@
 import Layout from '../components/Layout';
-import { getUser, getCourses, getTodayClasses, getTodayDay, DAY_LABELS } from '../utils/storage';
+import { getUser, getCourses, getTodayClasses, getTodayDay, DAY_LABELS, saveUser } from '../utils/storage';
+
 import { calculateAllAttendance, calculateOverallAttendance, getAttColor, getBarColor } from '../utils/attendance';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import avatar1 from '../assets/avatars/avatar1.png';
+import avatar2 from '../assets/avatars/avatar2.png';
+import avatar3 from '../assets/avatars/avatar3.png';
+import avatar4 from '../assets/avatars/avatar4.png';
+import avatar5 from '../assets/avatars/avatar5.png';
+
+const AVATARS = [
+    { id: 'av1', img: avatar1 },
+    { id: 'av2', img: avatar2 },
+    { id: 'av3', img: avatar3 },
+    { id: 'av4', img: avatar4 },
+    { id: 'av5', img: avatar5 },
+];
+
+const AVATAR_MAP = {
+    av1: avatar1,
+    av2: avatar2,
+    av3: avatar3,
+    av4: avatar4,
+    av5: avatar5,
+};
+
 
 export default function DashboardPage() {
     const navigate = useNavigate();
@@ -11,6 +35,18 @@ export default function DashboardPage() {
     const todayDay = getTodayDay();
     const overall = calculateOverallAttendance();
     const allStats = calculateAllAttendance();
+
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
+
+    const avatarImg = user?.avatar ? AVATAR_MAP[user.avatar] : null;
+
+    function handleUpdateAvatar(avId) {
+        saveUser({ ...user, avatar: avId });
+        setShowAvatarModal(false);
+        // Page will re-render with new user data from storage
+        window.location.reload(); // Quickest way to sync across Navbar and Dashboard if not using global state
+    }
+
 
     // Find courses needing attention (below 75%)
     const needAttention = courses.filter(c => {
@@ -59,23 +95,41 @@ export default function DashboardPage() {
                     {/* Student info card */}
                     <div className="hd-card hd-card--flat dash-info-card" style={{ transform: 'rotate(-0.5deg)' }}>
                         <div className="hd-tape" />
-                        <h3 style={{ marginBottom: 12 }}>📋 Student Info</h3>
-                        <div className="dash-info-grid">
-                            <div className="dash-info-item">
-                                <span className="dash-info-label">Name</span>
-                                <span className="dash-info-val">{user?.name || '—'}</span>
+                        <div className="dash-info-header">
+                            <h3>📋 Student Info</h3>
+                            <button className="dash-avatar-edit" onClick={() => setShowAvatarModal(true)}>
+                                Edit Avatar ✏️
+                            </button>
+                        </div>
+                        <div className="dash-info-main">
+                            <div className="dash-avatar-main">
+                                <div className="dash-avatar-frame">
+                                    {avatarImg ? (
+                                        <img src={avatarImg} alt="Avatar" className="dash-avatar-img" />
+                                    ) : (
+                                        <div className="dash-avatar-placeholder">
+                                            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div className="dash-info-item">
-                                <span className="dash-info-label">ID</span>
-                                <span className="dash-info-val">{user?.username || '—'}</span>
-                            </div>
-                            <div className="dash-info-item">
-                                <span className="dash-info-label">Branch</span>
-                                <span className="dash-info-val">{user?.branch || '—'}</span>
-                            </div>
-                            <div className="dash-info-item">
-                                <span className="dash-info-label">Courses</span>
-                                <span className="dash-info-val">{courses.length}</span>
+                            <div className="dash-info-grid">
+                                <div className="dash-info-item">
+                                    <span className="dash-info-label">Name</span>
+                                    <span className="dash-info-val">{user?.name || '—'}</span>
+                                </div>
+                                <div className="dash-info-item">
+                                    <span className="dash-info-label">ID</span>
+                                    <span className="dash-info-val">{user?.username || '—'}</span>
+                                </div>
+                                <div className="dash-info-item">
+                                    <span className="dash-info-label">Branch</span>
+                                    <span className="dash-info-val">{user?.branch || '—'}</span>
+                                </div>
+                                <div className="dash-info-item">
+                                    <span className="dash-info-label">Courses</span>
+                                    <span className="dash-info-val">{courses.length}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -142,6 +196,33 @@ export default function DashboardPage() {
                         📅 View Schedule
                     </button>
                 </div>
+
+                {/* Avatar Selection Modal */}
+                {showAvatarModal && (
+                    <div className="hd-overlay" onClick={() => setShowAvatarModal(false)}>
+                        <div className="hd-modal" onClick={e => e.stopPropagation()}>
+                            <h2 className="hd-text-center">Change Your Avatar</h2>
+                            <p className="hd-text-muted hd-text-center hd-mb-lg">Choose a new look for your profile</p>
+                            
+                            <div className="dash-avatar-picker">
+                                {AVATARS.map(av => (
+                                    <div 
+                                        key={av.id} 
+                                        className={`dash-avatar-option ${user?.avatar === av.id ? 'dash-avatar-option--active' : ''}`}
+                                        onClick={() => handleUpdateAvatar(av.id)}
+                                    >
+                                        <img src={av.img} alt="Avatar" className="dash-avatar-img" />
+                                        {user?.avatar === av.id && <div className="dash-avatar-check">✓</div>}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button className="hd-btn hd-btn--full hd-mt-lg" onClick={() => setShowAvatarModal(false)}>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </Layout>
     );
@@ -187,10 +268,61 @@ const styles = `
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
+.dash-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.dash-avatar-edit {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.dash-avatar-edit:hover { color: var(--accent); }
+
+.dash-info-main {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.dash-avatar-main {
+  flex-shrink: 0;
+}
+.dash-avatar-frame {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-wobbly);
+  border: 4px solid var(--border);
+  background: var(--postit);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transform: rotate(-3deg);
+}
+.dash-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dash-avatar-placeholder {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 32px;
+  color: var(--fg);
+}
+
 .dash-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+  flex: 1;
 }
 .dash-info-item {
   display: flex;
@@ -266,5 +398,53 @@ const styles = `
 }
 @media (max-width: 480px) {
   .dash-greeting { font-size: 26px; }
+  .dash-info-main { flex-direction: column; text-align: center; }
+  .dash-info-grid { width: 100%; }
+}
+
+.dash-avatar-picker {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 10px 0;
+}
+.dash-avatar-option {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-wobbly-md);
+  border: 3px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.dash-avatar-option:hover {
+  transform: scale(1.1) rotate(2deg);
+  border-color: var(--accent);
+}
+.dash-avatar-option--active {
+  border-color: var(--accent);
+  transform: scale(1.1) rotate(-2deg);
+  box-shadow: 0 0 15px rgba(255, 77, 77, 0.4);
+}
+.dash-avatar-check {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  color: var(--white);
+  border-bottom-left-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border-left: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  font-weight: bold;
 }
 `;
