@@ -24,25 +24,35 @@ function OnboardingRoute() {
     return <OnboardingPage />;
 }
 
+import { useState } from 'react';
+import IntroAnimation from './components/IntroAnimation';
+
 export default function App() {
+    const [showIntro, setShowIntro] = useState(true);
+
     return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/login" element={
-                    <AuthRoute><LoginPage /></AuthRoute>
-                } />
-                <Route path="/onboarding" element={<OnboardingRoute />} />
-                <Route path="/dashboard" element={
-                    <ProtectedRoute><DashboardPage /></ProtectedRoute>
-                } />
-                <Route path="/attendance" element={
-                    <ProtectedRoute><AttendancePage /></ProtectedRoute>
-                } />
-                <Route path="/schedule" element={
-                    <ProtectedRoute><SchedulePage /></ProtectedRoute>
-                } />
-                <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-        </BrowserRouter>
+        <>
+            {showIntro && <IntroAnimation onComplete={() => setShowIntro(false)} />}
+            {!showIntro && (
+                <BrowserRouter>
+                    <Routes>
+                        <Route path="/login" element={
+                            <AuthRoute><LoginPage /></AuthRoute>
+                        } />
+                        <Route path="/onboarding" element={<OnboardingRoute />} />
+                        <Route path="/dashboard" element={
+                            <ProtectedRoute><DashboardPage /></ProtectedRoute>
+                        } />
+                        <Route path="/attendance" element={
+                            <ProtectedRoute><AttendancePage /></ProtectedRoute>
+                        } />
+                        <Route path="/schedule" element={
+                            <ProtectedRoute><SchedulePage /></ProtectedRoute>
+                        } />
+                        <Route path="*" element={<Navigate to="/login" replace />} />
+                    </Routes>
+                </BrowserRouter>
+            )}
+        </>
     );
 }
