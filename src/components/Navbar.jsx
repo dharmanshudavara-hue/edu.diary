@@ -49,6 +49,7 @@ export default function Navbar() {
           <li><NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Dashboard</NavLink></li>
           <li><NavLink to="/attendance" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Attendance</NavLink></li>
           <li><NavLink to="/schedule" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Schedule</NavLink></li>
+          <li><NavLink to="/tasks" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Tasks 📝</NavLink></li>
         </ul>
 
         <div className="nav-user-wrap" ref={ref}>
@@ -86,6 +87,9 @@ export default function Navbar() {
                 </button></li>
                 <li><button className="nav-dd-item" onClick={() => { setOpen(false); navigate('/schedule'); }}>
                   <span className="nav-dd-icon">📅</span> Schedule
+                </button></li>
+                <li><button className="nav-dd-item" onClick={() => { setOpen(false); navigate('/tasks'); }}>
+                  <span className="nav-dd-icon">📝</span> Tasks
                 </button></li>
               </ul>
 

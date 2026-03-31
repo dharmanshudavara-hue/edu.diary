@@ -163,6 +163,7 @@ export function getTodayClasses() {
 }
 // Session-level flags (resets on refresh)
 let attendancePopupDismissed = false;
+let eventPopupDismissed = false;
 
 export function isAttendancePopupDismissed() {
     return attendancePopupDismissed;
@@ -170,4 +171,23 @@ export function isAttendancePopupDismissed() {
 
 export function setAttendancePopupDismissed(val) {
     attendancePopupDismissed = !!val;
+}
+
+export function isEventPopupDismissed() {
+    return eventPopupDismissed;
+}
+
+export function setEventPopupDismissed(val) {
+    eventPopupDismissed = !!val;
+}
+
+export function getEvents() {
+    const d = getData();
+    return d?.events || [];
+}
+
+export function saveEvents(events) {
+    const d = getData() || {};
+    d.events = events;
+    saveData(d);
 }

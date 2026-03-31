@@ -3,7 +3,7 @@ import { getCourses, getTodayClasses, getAttendance, saveAttendance, getSettings
 
 export default function AttendancePopup() {
     const [show, setShow] = useState(false);
-    const [mode, setMode] = useState(null); // null, 'yes-all', 'yes-except', 'no'
+    const [mode, setMode] = useState(null); // null, 'yes-all', 'yes-except', 'no', 'holiday'
     const [exceptList, setExceptList] = useState([]); // courseIds to skip
     const [extraLecture, setExtraLecture] = useState(false);
     const [extraCourseId, setExtraCourseId] = useState('');
@@ -47,6 +47,7 @@ export default function AttendancePopup() {
             } else if (mode === 'no') {
                 entries.push({ courseId: slot.courseId, attended: false });
             }
+            // For 'holiday', no entries are pushed, effectively ignoring the classes for today
         }
 
         // Extra lecture
@@ -125,6 +126,9 @@ export default function AttendancePopup() {
                             <button className="hd-btn popup-opt-btn popup-opt-no" onClick={() => setMode('no')}>
                                 ❌ No — Didn't attend
                             </button>
+                            <button className="hd-btn popup-opt-btn popup-opt-holiday" onClick={() => setMode('holiday')}>
+                                🏖️ Holiday — No records marked
+                            </button>
                         </div>
                     )}
 
@@ -156,6 +160,7 @@ export default function AttendancePopup() {
                                 {mode === 'yes-all' && '✅ Marking all classes as attended'}
                                 {mode === 'yes-except' && `✅ Attending all except: ${exceptList.map(id => courses.find(c => c.id === id)?.name || id).join(', ') || 'none selected'}`}
                                 {mode === 'no' && '❌ Marking all classes as absent'}
+                                {mode === 'holiday' && '🏖️ Today is holiday — No attendance will be marked'}
                             </div>
 
                             {/* Extra lecture toggle */}
@@ -264,6 +269,7 @@ const styles = `
 .popup-opt-yes:hover { background: #22c55e; border-color: #22c55e; }
 .popup-opt-except:hover { background: var(--blue); border-color: var(--blue); }
 .popup-opt-no:hover { background: var(--accent); border-color: var(--accent); }
+.popup-opt-holiday:hover { background: #f59e0b; border-color: #f59e0b; color: #fff; }
 .popup-except {
   margin-bottom: 16px;
 }

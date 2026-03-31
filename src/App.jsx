@@ -5,6 +5,7 @@ import OnboardingPage from './pages/OnboardingPage';
 import DashboardPage from './pages/DashboardPage';
 import AttendancePage from './pages/AttendancePage';
 import SchedulePage from './pages/SchedulePage';
+import TasksPage from './pages/TasksPage';
 
 function ProtectedRoute({ children }) {
     if (!isLoggedIn()) return <Navigate to="/login" replace />;
@@ -28,11 +29,14 @@ import { useState } from 'react';
 import IntroAnimation from './components/IntroAnimation';
 
 export default function App() {
-    const [showIntro, setShowIntro] = useState(true);
+    const [showIntro, setShowIntro] = useState(!sessionStorage.getItem('introPlayed'));
 
     return (
         <>
-            {showIntro && <IntroAnimation onComplete={() => setShowIntro(false)} />}
+            {showIntro && <IntroAnimation onComplete={() => {
+                sessionStorage.setItem('introPlayed', 'true');
+                setShowIntro(false);
+            }} />}
             {!showIntro && (
                 <BrowserRouter>
                     <Routes>
@@ -48,6 +52,9 @@ export default function App() {
                         } />
                         <Route path="/schedule" element={
                             <ProtectedRoute><SchedulePage /></ProtectedRoute>
+                        } />
+                        <Route path="/tasks" element={
+                            <ProtectedRoute><TasksPage /></ProtectedRoute>
                         } />
                         <Route path="*" element={<Navigate to="/login" replace />} />
                     </Routes>

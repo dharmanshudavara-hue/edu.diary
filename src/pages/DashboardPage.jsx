@@ -2,6 +2,7 @@ import Layout from '../components/Layout';
 import { getUser, getCourses, getTodayClasses, getTodayDay, DAY_LABELS, saveUser } from '../utils/storage';
 
 import { calculateAllAttendance, calculateOverallAttendance, getAttColor, getBarColor } from '../utils/attendance';
+import EventPopup from '../components/EventPopup';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import avatar1 from '../assets/avatars/avatar1.png';
@@ -58,6 +59,7 @@ export default function DashboardPage() {
 
     return (
         <Layout>
+            <EventPopup />
             <style>{styles}</style>
             <div style={{ animation: 'hd-fadeIn 0.4s ease-out' }}>
                 {/* Greeting */}
