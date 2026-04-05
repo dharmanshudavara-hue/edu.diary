@@ -62,7 +62,7 @@ export default async function handler(req, res) {
         const genAI = new GoogleGenerativeAI(apiKey);
 
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.0-flash-lite",
             systemInstruction: `You are Lumi, a friendly, personal study assistant for a student diary app.
 Here is the user's latest local data:
 ${context || "No context available."}

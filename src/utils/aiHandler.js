@@ -202,40 +202,48 @@ export async function sendChatMessage(messageHistory) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.0-flash-lite",
             systemInstruction: `You are Lumi, a friendly, personal study assistant for a student diary app.
 Here is the user's latest local data:
 ${context}
 Answer naturally, keep it relatively concise, and format answers using Markdown when making lists or bolding things. 
 If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`,
-            tools: [{ functionDeclarations: [
-                {
-                    name: "addTask",
-                    description: "Adds a new task or reminder to the user's schedule.",
-                    parameters: { type: SchemaType.OBJECT, properties: {
-                        title: { type: SchemaType.STRING, description: "The task title" },
-                        date: { type: SchemaType.STRING, description: "Date in YYYY-MM-DD format" }
-                    }, required: ["title", "date"] }
-                },
-                {
-                    name: "manageCourse",
-                    description: "Adds or removes an opted course.",
-                    parameters: { type: SchemaType.OBJECT, properties: {
-                        action: { type: SchemaType.STRING, description: "'add' or 'remove'" },
-                        courseName: { type: SchemaType.STRING, description: "Course name" }
-                    }, required: ["action", "courseName"] }
-                },
-                {
-                    name: "manageTimetable",
-                    description: "Adds or removes a class from the weekly timetable.",
-                    parameters: { type: SchemaType.OBJECT, properties: {
-                        action: { type: SchemaType.STRING, description: "'add' or 'remove'" },
-                        courseName: { type: SchemaType.STRING, description: "Course name" },
-                        day: { type: SchemaType.STRING, description: "Day of week (lowercase)" },
-                        time: { type: SchemaType.STRING, description: "Time in HH:MM 24h format" }
-                    }, required: ["action", "courseName", "day", "time"] }
-                }
-            ] }]
+            tools: [{
+                functionDeclarations: [
+                    {
+                        name: "addTask",
+                        description: "Adds a new task or reminder to the user's schedule.",
+                        parameters: {
+                            type: SchemaType.OBJECT, properties: {
+                                title: { type: SchemaType.STRING, description: "The task title" },
+                                date: { type: SchemaType.STRING, description: "Date in YYYY-MM-DD format" }
+                            }, required: ["title", "date"]
+                        }
+                    },
+                    {
+                        name: "manageCourse",
+                        description: "Adds or removes an opted course.",
+                        parameters: {
+                            type: SchemaType.OBJECT, properties: {
+                                action: { type: SchemaType.STRING, description: "'add' or 'remove'" },
+                                courseName: { type: SchemaType.STRING, description: "Course name" }
+                            }, required: ["action", "courseName"]
+                        }
+                    },
+                    {
+                        name: "manageTimetable",
+                        description: "Adds or removes a class from the weekly timetable.",
+                        parameters: {
+                            type: SchemaType.OBJECT, properties: {
+                                action: { type: SchemaType.STRING, description: "'add' or 'remove'" },
+                                courseName: { type: SchemaType.STRING, description: "Course name" },
+                                day: { type: SchemaType.STRING, description: "Day of week (lowercase)" },
+                                time: { type: SchemaType.STRING, description: "Time in HH:MM 24h format" }
+                            }, required: ["action", "courseName", "day", "time"]
+                        }
+                    }
+                ]
+            }]
         });
 
         const geminiHistory = rawHistory.map(m => ({
@@ -255,6 +263,6 @@ If the user asks you to add a task, use the addTask tool. If they ask to add or 
         return result.response.text();
     } catch (e) {
         console.error("Lumi AI error:", e);
-        return "Oops! I encountered an error connecting to my AI brain. Please try again later.";
+        return `Oops! I encountered an AI error: ${e.message}`;
     }
 }
