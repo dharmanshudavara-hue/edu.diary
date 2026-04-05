@@ -192,75 +192,101 @@ export async function sendChatMessage(messageHistory) {
         }
     }
 
-    // ───── DEVELOPMENT: Direct Gemini call (key stays in .env.local) ─────
+    // ───── DEVELOPMENT: Direct Groq call (key stays in .env.local) ─────
     try {
-        const { GoogleGenerativeAI, SchemaType } = await import("@google/generative-ai");
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        const { OpenAI } = await import("openai");
+        const apiKey = import.meta.env.VITE_GROQ_API_KEY;
         if (!apiKey) {
-            return "Dev error: VITE_GEMINI_API_KEY is missing in .env.local.";
+            return "Dev error: VITE_GROQ_API_KEY is missing in .env.local.";
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash-lite",
-            systemInstruction: `You are Lumi, a friendly, personal study assistant for a student diary app.
+        const openai = new OpenAI({
+            apiKey: apiKey,
+            baseURL: "https://api.groq.com/openai/v1",
+            dangerouslyAllowBrowser: true // Required for client-side API requests
+        });
+
+        const systemMessage = `You are Lumi, a friendly, personal study assistant for a student diary app.
 Here is the user's latest local data:
 ${context}
 Answer naturally, keep it relatively concise, and format answers using Markdown when making lists or bolding things. 
-If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`,
-            tools: [{
-                functionDeclarations: [
-                    {
-                        name: "addTask",
-                        description: "Adds a new task or reminder to the user's schedule.",
-                        parameters: {
-                            type: SchemaType.OBJECT, properties: {
-                                title: { type: SchemaType.STRING, description: "The task title" },
-                                date: { type: SchemaType.STRING, description: "Date in YYYY-MM-DD format" }
-                            }, required: ["title", "date"]
-                        }
-                    },
-                    {
-                        name: "manageCourse",
-                        description: "Adds or removes an opted course.",
-                        parameters: {
-                            type: SchemaType.OBJECT, properties: {
-                                action: { type: SchemaType.STRING, description: "'add' or 'remove'" },
-                                courseName: { type: SchemaType.STRING, description: "Course name" }
-                            }, required: ["action", "courseName"]
-                        }
-                    },
-                    {
-                        name: "manageTimetable",
-                        description: "Adds or removes a class from the weekly timetable.",
-                        parameters: {
-                            type: SchemaType.OBJECT, properties: {
-                                action: { type: SchemaType.STRING, description: "'add' or 'remove'" },
-                                courseName: { type: SchemaType.STRING, description: "Course name" },
-                                day: { type: SchemaType.STRING, description: "Day of week (lowercase)" },
-                                time: { type: SchemaType.STRING, description: "Time in HH:MM 24h format" }
-                            }, required: ["action", "courseName", "day", "time"]
-                        }
+If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`;
+
+        const tools = [
+            {
+                type: "function",
+                function: {
+                    name: "addTask",
+                    description: "Adds a new task or reminder to the user's schedule.",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            title: { type: "string", description: "The task title" },
+                            date: { type: "string", description: "Date in YYYY-MM-DD format based on what the user asked" }
+                        },
+                        required: ["title", "date"]
                     }
-                ]
-            }]
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "manageCourse",
+                    description: "Adds or removes an opted course.",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            action: { type: "string", description: "'add' or 'remove'" },
+                            courseName: { type: "string", description: "Course name" }
+                        },
+                        required: ["action", "courseName"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "manageTimetable",
+                    description: "Adds or removes a class from the weekly timetable.",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            action: { type: "string", description: "'add' or 'remove'" },
+                            courseName: { type: "string", description: "Course name" },
+                            day: { type: "string", description: "Day of week (lowercase)" },
+                            time: { type: "string", description: "Time in HH:MM 24h format" }
+                        },
+                        required: ["action", "courseName", "day", "time"]
+                    }
+                }
+            }
+        ];
+
+        const openAiHistory = rawHistory.map(m => ({
+            role: m.role === "model" ? "assistant" : "user",
+            content: m.parts || m.content || ""
+        }));
+        
+        openAiHistory.push({ role: "user", content: lastMessage });
+
+        const result = await openai.chat.completions.create({
+            model: "llama-3.3-70b-versatile", // Blazing fast Groq model
+            messages: [
+                { role: "system", content: systemMessage },
+                ...openAiHistory
+            ],
+            tools: tools
         });
 
-        const geminiHistory = rawHistory.map(m => ({
-            role: m.role,
-            parts: [{ text: m.parts }]
-        }));
+        const message = result.choices[0].message;
 
-        const chat = model.startChat({ history: geminiHistory });
-        const result = await chat.sendMessage(lastMessage);
-        const functionCalls = result.response.functionCalls();
-
-        if (functionCalls && functionCalls.length > 0) {
-            const call = functionCalls[0];
-            return executeFunctionCall(call.name, call.args);
+        if (message.tool_calls && message.tool_calls.length > 0) {
+            const toolCall = message.tool_calls[0];
+            const args = JSON.parse(toolCall.function.arguments);
+            return executeFunctionCall(toolCall.function.name, args);
         }
 
-        return result.response.text();
+        return message.content || "I couldn't generate a response.";
     } catch (e) {
         console.error("Lumi AI error:", e);
         return `Oops! I encountered an AI error: ${e.message}`;

@@ -1,55 +1,63 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import OpenAI from "openai";
 
-const toolDeclarations = [
+const tools = [
     {
-        name: "addTask",
-        description: "Adds a new task or reminder to the user's schedule.",
-        parameters: {
-            type: SchemaType.OBJECT,
-            properties: {
-                title: { type: SchemaType.STRING, description: "The task title (e.g., 'Study Math')" },
-                date: { type: SchemaType.STRING, description: "The target date in YYYY-MM-DD format based on what the user said (e.g. today, tomorrow, specific date)." }
-            },
-            required: ["title", "date"]
+        type: "function",
+        function: {
+            name: "addTask",
+            description: "Adds a new task or reminder to the user's schedule.",
+            parameters: {
+                type: "object",
+                properties: {
+                    title: { type: "string", description: "The task title (e.g., 'Study Math')" },
+                    date: { type: "string", description: "The target date in YYYY-MM-DD format based on what the user said (e.g. today, tomorrow, specific date)." }
+                },
+                required: ["title", "date"]
+            }
         }
     },
     {
-        name: "manageCourse",
-        description: "Adds or removes an opted course from the user's list. Use this when the user says 'add physics to my opted courses' or 'remove math'.",
-        parameters: {
-            type: SchemaType.OBJECT,
-            properties: {
-                action: { type: SchemaType.STRING, description: "'add' or 'remove'" },
-                courseName: { type: SchemaType.STRING, description: "The name of the course to add or remove" }
-            },
-            required: ["action", "courseName"]
+        type: "function",
+        function: {
+            name: "manageCourse",
+            description: "Adds or removes an opted course from the user's list. Use this when the user says 'add physics to my opted courses' or 'remove math'.",
+            parameters: {
+                type: "object",
+                properties: {
+                    action: { type: "string", description: "'add' or 'remove'" },
+                    courseName: { type: "string", description: "The name of the course to add or remove" }
+                },
+                required: ["action", "courseName"]
+            }
         }
     },
     {
-        name: "manageTimetable",
-        description: "Adds or removes a class from the user's weekly timetable.",
-        parameters: {
-            type: SchemaType.OBJECT,
-            properties: {
-                action: { type: SchemaType.STRING, description: "'add' or 'remove'" },
-                courseName: { type: SchemaType.STRING, description: "Name of the course (e.g., 'JEE' or 'Physics'). It will be auto-created if it doesn't exist." },
-                day: { type: SchemaType.STRING, description: "Day of the week (e.g., 'monday', 'tuesday'). Must be lowercase." },
-                time: { type: SchemaType.STRING, description: "Starting time of the class in 24-hour format HH:MM (e.g., '14:00' for 2:00pm)." }
-            },
-            required: ["action", "courseName", "day", "time"]
+        type: "function",
+        function: {
+            name: "manageTimetable",
+            description: "Adds or removes a class from the user's weekly timetable.",
+            parameters: {
+                type: "object",
+                properties: {
+                    action: { type: "string", description: "'add' or 'remove'" },
+                    courseName: { type: "string", description: "Name of the course (e.g., 'JEE' or 'Physics'). It will be auto-created if it doesn't exist." },
+                    day: { type: "string", description: "Day of the week (e.g., 'monday', 'tuesday'). Must be lowercase." },
+                    time: { type: "string", description: "Starting time of the class in 24-hour format HH:MM (e.g., '14:00' for 2:00pm)." }
+                },
+                required: ["action", "courseName", "day", "time"]
+            }
         }
     }
 ];
 
 export default async function handler(req, res) {
-    // Only allow POST
     if (req.method !== "POST") {
         return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY; 
     if (!apiKey) {
-        return res.status(500).json({ error: "Gemini API key is not configured on the server." });
+        return res.status(500).json({ error: "Groq API key is not configured on the server. Please set GROQ_API_KEY in Vercel settings." });
     }
 
     try {
@@ -59,49 +67,57 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: "Missing lastMessage in request body." });
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
+        const openai = new OpenAI({
+            apiKey: apiKey,
+            baseURL: "https://api.groq.com/openai/v1"
+        });
 
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash-lite",
-            systemInstruction: `You are Lumi, a friendly, personal study assistant for a student diary app.
+        const systemMessage = `You are Lumi, a friendly, personal study assistant for a student diary app.
 Here is the user's latest local data:
 ${context || "No context available."}
 Answer naturally, keep it relatively concise, and format answers using Markdown when making lists or bolding things. 
-If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`,
-            tools: [{ functionDeclarations: toolDeclarations }]
-        });
+If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`;
 
         // Filter history: must start with "user" role
-        let history = messages || [];
-        if (history.length > 0 && history[0].role === "model") {
-            history = history.slice(1);
+        let rawHistory = messages || [];
+        if (rawHistory.length > 0 && rawHistory[0].role === "model") {
+            rawHistory = rawHistory.slice(1);
         }
 
-        const geminiHistory = history.map(m => ({
-            role: m.role,
-            parts: [{ text: m.parts }]
+        const openAiHistory = rawHistory.map(m => ({
+            role: m.role === "model" ? "assistant" : "user",
+            content: m.parts || m.content || ""
         }));
 
-        const chat = model.startChat({ history: geminiHistory });
-        const result = await chat.sendMessage(lastMessage);
-        const functionCalls = result.response.functionCalls();
+        openAiHistory.push({ role: "user", content: lastMessage });
 
-        if (functionCalls && functionCalls.length > 0) {
-            const call = functionCalls[0];
+        const result = await openai.chat.completions.create({
+            model: "llama-3.3-70b-versatile", 
+            messages: [
+                { role: "system", content: systemMessage },
+                ...openAiHistory
+            ],
+            tools: tools
+        });
+
+        const message = result.choices[0].message;
+
+        if (message.tool_calls && message.tool_calls.length > 0) {
+            const toolCall = message.tool_calls[0];
             return res.status(200).json({
                 type: "functionCall",
-                name: call.name,
-                args: call.args
+                name: toolCall.function.name,
+                args: JSON.parse(toolCall.function.arguments)
             });
         }
 
         return res.status(200).json({
             type: "text",
-            content: result.response.text()
+            content: message.content || "I processed your request but couldn't generate a response."
         });
 
     } catch (e) {
         console.error("Serverless Lumi error:", e);
-        return res.status(500).json({ error: "AI processing failed. " + (e.message || "") });
+        return res.status(500).json({ error: e.message || "AI processing failed." });
     }
 }
