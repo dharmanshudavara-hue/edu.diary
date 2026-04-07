@@ -47,6 +47,23 @@ const tools = [
                 required: ["action", "courseName", "day", "time"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "manageAttendance",
+            description: "Marks or removes attendance for a specific subject on a specific date.",
+            parameters: {
+                type: "object",
+                properties: {
+                    action: { type: "string", description: "'mark' or 'remove'" },
+                    courseName: { type: "string", description: "Name of the course (e.g., 'Math' or 'Physics')." },
+                    date: { type: "string", description: "The date in YYYY-MM-DD format (e.g., today, yesterday, or specific date)." },
+                    status: { type: "string", description: "Attendance status for 'mark' action: 'present' or 'absent'." }
+                },
+                required: ["action", "courseName", "date"]
+            }
+        }
     }
 ];
 
@@ -76,7 +93,7 @@ export default async function handler(req, res) {
 Here is the user's latest local data:
 ${context || "No context available."}
 Answer naturally, keep it relatively concise, and format answers using Markdown when making lists or bolding things. 
-If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`;
+If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. If they ask to mark or remove attendance for a subject, use the manageAttendance tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`;
 
         // Filter history: must start with "user" role
         let rawHistory = messages || [];

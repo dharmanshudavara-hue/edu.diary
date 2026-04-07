@@ -1,4 +1,4 @@
-import { getCourses, saveCourses, getTodayClasses, getEvents, saveEvents, todayStr, getTimetable, saveTimetable } from "./storage";
+import { getCourses, saveCourses, getTodayClasses, getEvents, saveEvents, todayStr, getTimetable, saveTimetable, getAttendance, saveAttendance } from "./storage";
 import { calculateAllAttendance, calculateOverallAttendance, predictSkippable, predictRequired } from "./attendance";
 
 /**
@@ -143,6 +143,53 @@ function executeFunctionCall(name, args) {
         }
     }
 
+    if (name === "manageAttendance") {
+        const { action, courseName, date, status } = args;
+        const userCourses = getCourses();
+        const course = userCourses.find(c => c.name.toLowerCase() === courseName.toLowerCase());
+
+        if (!course) {
+            return `I couldn't find a course named **${courseName}**. Please make sure it's in your opted courses first!`;
+        }
+
+        let attendance = getAttendance();
+        let dayRecord = attendance.find(r => r.date === date);
+
+        if (action === "mark") {
+            const isAttended = status === "present";
+            if (!dayRecord) {
+                dayRecord = { date, entries: [] };
+                attendance.push(dayRecord);
+            }
+
+            const existingEntryIndex = dayRecord.entries.findIndex(e => e.courseId === course.id);
+            if (existingEntryIndex >= 0) {
+                dayRecord.entries[existingEntryIndex].attended = isAttended;
+            } else {
+                dayRecord.entries.push({ courseId: course.id, attended: isAttended });
+            }
+
+            saveAttendance(attendance);
+            return `I've marked **${course.name}** as **${status}** for ${date}.`;
+        } else if (action === "remove") {
+            if (!dayRecord) {
+                return `There are no attendance records for ${date}.`;
+            }
+
+            const initialLen = dayRecord.entries.length;
+            dayRecord.entries = dayRecord.entries.filter(e => e.courseId !== course.id);
+
+            if (dayRecord.entries.length < initialLen) {
+                if (dayRecord.entries.length === 0) {
+                    attendance = attendance.filter(r => r.date !== date);
+                }
+                saveAttendance(attendance);
+                return `I've removed the attendance record for **${course.name}** on ${date}.`;
+            }
+            return `I couldn't find an attendance record for **${course.name}** on ${date}.`;
+        }
+    }
+
     return "I received an unknown action. Please try again.";
 }
 
@@ -210,7 +257,7 @@ export async function sendChatMessage(messageHistory) {
 Here is the user's latest local data:
 ${context}
 Answer naturally, keep it relatively concise, and format answers using Markdown when making lists or bolding things. 
-If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`;
+If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. If they ask to mark or remove attendance for a subject, use the manageAttendance tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`;
 
         const tools = [
             {
@@ -257,6 +304,23 @@ If the user asks you to add a task, use the addTask tool. If they ask to add or 
                             time: { type: "string", description: "Time in HH:MM 24h format" }
                         },
                         required: ["action", "courseName", "day", "time"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "manageAttendance",
+                    description: "Marks or removes attendance for a specific subject on a specific date.",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            action: { type: "string", description: "'mark' or 'remove'" },
+                            courseName: { type: "string", description: "Name of the course (e.g., 'Math' or 'Physics')." },
+                            date: { type: "string", description: "The date in YYYY-MM-DD format (e.g., today, yesterday, or specific date)." },
+                            status: { type: "string", description: "Attendance status for 'mark' action: 'present' or 'absent'." }
+                        },
+                        required: ["action", "courseName", "date"]
                     }
                 }
             }
