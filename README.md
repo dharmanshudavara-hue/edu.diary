@@ -18,7 +18,8 @@ A web application designed for university students to manage their daily academi
 - Attendance Prediction: Calculation of classes that can be skipped or are required to maintain a 75 percent attendance threshold.
 - Class Schedule: Weekly timetable view for organized tracking of lectures.
 - Daily Reminders: Automatic pop-up on login to record attendance for the day's classes.
-
+- AI Chatbot: Lumi is personolized ai chatbot that will help students to manage schedule and attendace and tasks by prompting.
+  
 ## Design Philosophy
 
 The application utilizes a Hand-Drawn design system characterized by wobbly borders, paper textures, handwritten typography (Kalam and Patrick Hand), and hard offset shadows. This creates an approachable and personalized aesthetic.
