@@ -11,14 +11,14 @@ export default function EventPopup() {
             if (dismissed) return;
 
             const events = getEvents();
-            // Show overdue and today's events that are not done
-            const tomorrowDate = new Date();
-            tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-            const tomorrowStr = tomorrowDate.toISOString().split('T')[0] + 'T00:00:00';
+            // Show overdue and events due within the next 2 days (today + 2 days ahead)
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() + 3); // 2 days ahead (today + 2)
+            const cutoffStr = cutoffDate.toISOString().split('T')[0] + 'T00:00:00';
 
             const urgent = events.filter(e => 
                 !e.done && 
-                new Date(e.date) < new Date(tomorrowStr)
+                new Date(e.date) < new Date(cutoffStr)
             );
 
             if (urgent.length > 0) {
@@ -70,16 +70,25 @@ export default function EventPopup() {
 
                     <div className="event-popup-list">
                         {dueEvents.map(ev => {
-                            const isOverdue = new Date(ev.date) < new Date(todayStr() + 'T00:00:00');
+                            const evDate = new Date(ev.date);
+                            const todayStart = new Date(todayStr() + 'T00:00:00');
+                            const tomorrowStart = new Date(todayStart);
+                            tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+                            
+                            const isOverdue = evDate < todayStart;
+                            const isDueToday = evDate >= todayStart && evDate < tomorrowStart;
+                            const isDueSoon = evDate >= tomorrowStart; // within next 2 days
                             return (
                                 <div key={ev.id} className="event-popup-item">
                                     <div className="event-popup-info">
                                         <div className="event-popup-name">
                                             {isOverdue && <span className="hd-badge hd-badge--red" style={{ marginRight: 6 }}>Overdue</span>}
+                                            {isDueToday && <span className="hd-badge hd-badge--orange" style={{ marginRight: 6 }}>Due Today</span>}
+                                            {isDueSoon && <span className="hd-badge hd-badge--blue" style={{ marginRight: 6 }}>Due Soon</span>}
                                             {ev.title}
                                         </div>
                                         <div className="event-popup-date">
-                                            Deadine: {new Date(ev.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                                            Deadline: {new Date(ev.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
                                         </div>
                                     </div>
                                     <button className="hd-btn" style={{ padding: '6px 12px', fontSize: 13 }} onClick={() => markDone(ev.id)}>

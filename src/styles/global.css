@@ -263,6 +263,16 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--white);
   border-color: var(--blue);
 }
+.hd-badge--red {
+  background: var(--accent);
+  color: var(--white);
+  border-color: var(--accent);
+}
+.hd-badge--orange {
+  background: #f59e0b;
+  color: var(--white);
+  border-color: #e8930a;
+}
 
 /* ── Modal overlay ── */
 .hd-overlay {
