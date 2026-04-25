@@ -5,8 +5,10 @@ import { calculateAllAttendance, calculateOverallAttendance, predictSkippable, p
 
 export default function AttendancePage() {
     const [courses, setCoursesState] = useState(getCourses());
-    const [editingCourse, setEditingCourse] = useState(null); // Course being edited
+    const [editingCourse, setEditingCourse] = useState(null);
     const [editForm, setEditForm] = useState({ attended: 0, total: 0 });
+    const [showHistory, setShowHistory] = useState(false);
+    const [searchDate, setSearchDate] = useState('');
 
     const allStats = calculateAllAttendance();
     const overall = calculateOverallAttendance();
@@ -164,51 +166,84 @@ export default function AttendancePage() {
                     </div>
                 )}
 
-                {/* Attendance Log */}
-                <h2 className="hd-mt-lg" style={{ marginBottom: 16 }}>Attendance Log 📖</h2>
-                <div className="hd-card hd-card--flat" style={{ transform: 'rotate(0.2deg)' }}>
-                    {attendance.length === 0 ? (
-                        <p className="hd-text-muted hd-text-center" style={{ padding: '20px 0' }}>
-                            No attendance recorded yet. The daily popup will help you track! ✏️
-                        </p>
-                    ) : (
-                        <div className="hd-table-wrap">
-                            <table className="hd-table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Course</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {[...attendance].reverse().map((record, ri) =>
-                                        record.entries.map((entry, ei) => {
-                                            const course = courses.find(c => c.id === entry.courseId);
-                                            return (
-                                                <tr key={`${ri}-${ei}`}>
-                                                    {ei === 0 ? (
-                                                        <td rowSpan={record.entries.length} style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, verticalAlign: 'top' }}>
-                                                            {new Date(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                                        </td>
-                                                    ) : null}
-                                                    <td>{course?.name || entry.courseId} <span className="hd-text-muted">({course?.code || ''})</span></td>
-                                                    <td>
-                                                        {entry.attended ? (
-                                                            <span className="hd-badge hd-badge--blue">✓ Present</span>
-                                                        ) : (
-                                                            <span className="hd-badge hd-badge--accent">✕ Absent</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                {/* Attendance History Button */}
+                <div className="att-history-btn-wrap">
+                    <button className="hd-btn att-history-btn" onClick={() => setShowHistory(true)}>
+                        📖 Attendance History
+                    </button>
                 </div>
+
+                {/* Attendance History Modal */}
+                {showHistory && (
+                    <div className="hd-overlay" onClick={() => setShowHistory(false)}>
+                        <div className="hd-modal att-history-modal" onClick={e => e.stopPropagation()}>
+                            <div className="hd-tape" />
+                            <button className="att-history-close" onClick={() => setShowHistory(false)} title="Close">✕</button>
+
+                            <h2 style={{ fontSize: 24, marginBottom: 4, marginTop: 8 }}>📖 Attendance History</h2>
+                            <p className="hd-text-muted" style={{ marginBottom: 8, fontSize: 14 }}>
+                                {attendance.length} day{attendance.length !== 1 ? 's' : ''} recorded
+                            </p>
+
+                            {/* Search by date */}
+                            <div className="att-history-search">
+                                <input
+                                    type="date"
+                                    className="hd-input att-history-date"
+                                    value={searchDate}
+                                    onChange={e => setSearchDate(e.target.value)}
+                                />
+                                {searchDate && (
+                                    <button className="hd-btn hd-btn--sm" onClick={() => setSearchDate('')}>
+                                        ✕ Clear
+                                    </button>
+                                )}
+                            </div>
+
+                            {attendance.length === 0 ? (
+                                <p className="hd-text-muted hd-text-center" style={{ padding: '30px 0' }}>
+                                    No attendance recorded yet. The daily popup will help you track! ✏️
+                                </p>
+                            ) : (
+                                <div className="hd-table-wrap">
+                                    <table className="hd-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Course</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[...attendance].reverse().filter(record => !searchDate || record.date === searchDate).map((record, ri) =>
+                                                record.entries.map((entry, ei) => {
+                                                    const course = courses.find(c => c.id === entry.courseId);
+                                                    return (
+                                                        <tr key={`${ri}-${ei}`}>
+                                                            {ei === 0 ? (
+                                                                <td rowSpan={record.entries.length} style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, verticalAlign: 'top' }}>
+                                                                    {new Date(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                                                                </td>
+                                                            ) : null}
+                                                            <td>{course?.name || entry.courseId} <span className="hd-text-muted">({course?.code || ''})</span></td>
+                                                            <td>
+                                                                {entry.attended ? (
+                                                                    <span className="hd-badge hd-badge--blue">✓ Present</span>
+                                                                ) : (
+                                                                    <span className="hd-badge hd-badge--accent">✕ Absent</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </Layout>
     );
@@ -295,6 +330,51 @@ const styles = `
   border-color: var(--muted);
   color: var(--fg);
   opacity: 0.6;
+}
+.att-history-btn-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+  margin-bottom: 16px;
+}
+.att-history-btn {
+  font-size: 17px;
+  padding: 14px 32px;
+  border-radius: var(--radius-wobbly-alt);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.att-history-btn:hover {
+  transform: translateY(-2px) rotate(-0.5deg);
+  box-shadow: 4px 4px 0 var(--border);
+}
+.att-history-modal {
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+.att-history-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--fg);
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+.att-history-close:hover { opacity: 1; }
+.att-history-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.att-history-date {
+  flex: 1;
+  font-size: 14px;
 }
 @media (max-width: 640px) {
   .att-grid { grid-template-columns: 1fr; }
