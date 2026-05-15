@@ -65,6 +65,66 @@ const tools = [
                 required: ["action", "courseName", "date"]
             }
         }
+    },
+    {
+        type: "function",
+        function: {
+            name: "getMotivation",
+            description: "Returns an inspiring motivational quote. Use when the user feels stressed, tired, demotivated, or asks for encouragement, motivation, or a pep talk.",
+            parameters: {
+                type: "object",
+                properties: {
+                    mood: { type: "string", description: "The user's mood: 'stressed', 'tired', 'unmotivated', or 'general'. Default 'general'." }
+                },
+                required: []
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "generateStudyPlan",
+            description: "Generates a personalized study plan based on the user's upcoming tasks, timetable, attendance, and workload. Use when the user asks for a study plan, schedule suggestion, or how to organize their study time.",
+            parameters: {
+                type: "object",
+                properties: {
+                    days: { type: "number", description: "Number of days to plan for (default 7, max 14)." },
+                    focusArea: { type: "string", description: "Optional specific subject to focus on." }
+                },
+                required: []
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "getInsights",
+            description: "Provides detailed analytics and insights about the user's academic performance, attendance trends, task completion, and a health score. Use when the user asks how they're doing, wants analysis, insights, a summary, or performance review.",
+            parameters: {
+                type: "object",
+                properties: {
+                    type: { type: "string", description: "'attendance', 'tasks', 'overview', or 'all'. Default 'all'." }
+                },
+                required: []
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "manageTask",
+            description: "Manages existing tasks: mark as complete/done, delete, or edit. Use when the user wants to finish, remove, or change an existing task.",
+            parameters: {
+                type: "object",
+                properties: {
+                    action: { type: "string", description: "'complete', 'delete', or 'edit'" },
+                    taskTitle: { type: "string", description: "Title or partial title of the task to manage" },
+                    newTitle: { type: "string", description: "New title (only for 'edit' action)" },
+                    newDate: { type: "string", description: "New date in YYYY-MM-DD (only for 'edit' action)" }
+                },
+                required: ["action", "taskTitle"]
+            }
+        }
     }
 ];
 
@@ -90,11 +150,40 @@ export default async function handler(req, res) {
             baseURL: "https://api.groq.com/openai/v1"
         });
 
-        const systemMessage = `You are Lumi, a friendly, personal study assistant for a student diary app.
+        const systemMessage = `You are Lumi ✨, a friendly, warm, and insightful personal study assistant for a student diary app.
+
+PERSONALITY:
+- You're encouraging, empathetic, and a bit playful
+- Use occasional emojis to keep things friendly (but don't overdo it)
+- Celebrate the user's achievements and gently nudge them on areas needing improvement
+- If the user seems stressed, be supportive first before giving advice
+
+CAPABILITIES (use the right tool for each):
+- addTask: Add new tasks/reminders
+- manageCourse: Add/remove opted courses
+- manageTimetable: Add/remove timetable classes
+- manageAttendance: Mark/remove attendance
+- getMotivation: Get motivational quotes (when user is stressed/tired/demotivated)
+- generateStudyPlan: Create personalized study plans from their data
+- getInsights: Provide detailed academic analytics and performance insights
+- manageTask: Complete, delete, or edit existing tasks
+
+NATIVE ABILITIES (respond directly, no tool needed):
+- Explain academic concepts, definitions, and terms
+- Translate text to other languages
+- Answer general knowledge and study questions
+- Give study tips and learning strategies
+
 Here is the user's latest local data:
 ${context || "No context available."}
-Answer naturally, keep it relatively concise, and format answers using Markdown when making lists or bolding things. 
-If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. If they ask to mark or remove attendance for a subject, use the manageAttendance tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`;
+
+RULES:
+- Answer naturally, keep it concise, use Markdown for formatting
+- Use the appropriate tool when the request matches a tool's purpose
+- For explanations, definitions, translations: respond directly without tools
+- Do NOT expose internal IDs or technical details
+- Be proactive: suggest relevant follow-up actions
+- Only respond as Lumi`;
 
         // Filter history: must start with "user" role
         let rawHistory = messages || [];

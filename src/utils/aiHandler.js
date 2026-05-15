@@ -1,6 +1,35 @@
 import { getCourses, saveCourses, getTodayClasses, getEvents, saveEvents, todayStr, getTimetable, saveTimetable, getAttendance, saveAttendance } from "./storage";
 import { calculateAllAttendance, calculateOverallAttendance, predictSkippable, predictRequired } from "./attendance";
 
+const QUOTES = {
+    stressed: [
+        ["You don't have to be perfect. You just have to keep showing up.", "Unknown"],
+        ["Take a deep breath. You've overcome challenges before.", "Unknown"],
+        ["The secret of getting ahead is getting started.", "Mark Twain"],
+        ["Stress means you care. Channel it into action.", "Unknown"],
+    ],
+    tired: [
+        ["Rest if you must, but don't you quit.", "John Greenleaf Whittier"],
+        ["It does not matter how slowly you go as long as you do not stop.", "Confucius"],
+        ["Even the strongest warriors need to sharpen their swords.", "Unknown"],
+    ],
+    unmotivated: [
+        ["Motivation gets you started. Habit keeps you going.", "Jim Ryun"],
+        ["The best time to plant a tree was 20 years ago. The second best time is now.", "Chinese Proverb"],
+        ["Don't watch the clock; do what it does. Keep going.", "Sam Levenson"],
+        ["You are braver than you believe, stronger than you seem.", "A.A. Milne"],
+    ],
+    general: [
+        ["Education is the most powerful weapon to change the world.", "Nelson Mandela"],
+        ["The expert in anything was once a beginner.", "Helen Hayes"],
+        ["The beautiful thing about learning is no one can take it away from you.", "B.B. King"],
+        ["Push yourself, because no one else is going to do it for you.", "Unknown"],
+        ["Dream big. Start small. Act now.", "Robin Sharma"],
+        ["The only way to do great work is to love what you do.", "Steve Jobs"],
+        ["There are no shortcuts to any place worth going.", "Beverly Sills"],
+    ]
+};
+
 /**
  * Builds the context string from local data to send to the AI.
  */
@@ -11,8 +40,12 @@ function buildContext() {
     const todayClasses = getTodayClasses();
     const events = getEvents();
 
+    const now = new Date();
+    const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
     let context = `Context Data:\n`;
-    context += `Today is: ${todayStr()}\n`;
+    context += `Today is: ${dayOfWeek}, ${todayStr()} (${timeStr})\n`;
     context += `Overall Attendance: ${overallAtt.percentage}%\n`;
     context += `Courses Attendance Breakdown:\n`;
     courses.forEach(c => {
@@ -42,6 +75,22 @@ function buildContext() {
             context += `- [Date: ${t.date}] ${t.title}\n`;
         });
     }
+
+    // Upcoming deadlines (next 3 days)
+    const upcoming = events.filter(e => {
+        if (e.done) return false;
+        const d = new Date(e.date);
+        const diff = (d - now) / (1000*60*60*24);
+        return diff >= 0 && diff <= 3;
+    });
+    if (upcoming.length > 0) {
+        context += `Upcoming Deadlines (next 3 days):\n`;
+        upcoming.forEach(t => {
+            const daysLeft = Math.ceil((new Date(t.date) - now) / (1000*60*60*24));
+            context += `- ${t.title} — ${daysLeft === 0 ? 'TODAY' : `in ${daysLeft} day(s)`}\n`;
+        });
+    }
+
     return context;
 }
 
@@ -190,6 +239,93 @@ function executeFunctionCall(name, args) {
         }
     }
 
+    if (name === "getMotivation") {
+        const mood = args.mood || 'general';
+        const pool = QUOTES[mood] || QUOTES.general;
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+        return `💡 *"${pick[0]}"*\n— ${pick[1]}`;
+    }
+
+    if (name === "generateStudyPlan") {
+        const days = Math.min(args.days || 7, 14);
+        const focus = args.focusArea;
+        const courses = getCourses();
+        const events = getEvents();
+        const timetable = getTimetable();
+        const courseAtts = calculateAllAttendance();
+        const weak = courses.filter(c => { const s = courseAtts[c.id]; return s && s.percentage < 75; });
+        const pending = events.filter(e => !e.done).sort((a,b) => new Date(a.date)-new Date(b.date));
+        let plan = `📚 **Your ${days}-Day Study Plan**\n\n`;
+        if (focus) plan += `🎯 **Focus:** ${focus}\n\n`;
+        if (weak.length > 0) {
+            plan += `⚠️ **Priority Subjects** (below 75%):\n`;
+            weak.forEach(c => { const s = courseAtts[c.id]; const r = predictRequired(c.id); plan += `- **${c.name}**: ${s.percentage}% — attend ${r} more\n`; });
+            plan += `\n`;
+        }
+        if (pending.length > 0) {
+            plan += `📅 **Upcoming Tasks:**\n`;
+            pending.slice(0,5).forEach(e => { const d = Math.ceil((new Date(e.date)-new Date())/(1000*60*60*24)); plan += `- **${e.title}** — ${d<=0?'TODAY!':`in ${d}d`}\n`; });
+            plan += `\n`;
+        }
+        const dayNames = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+        plan += `📋 **Daily Breakdown:**\n`;
+        for (let i = 0; i < Math.min(days,7); i++) {
+            const d = new Date(); d.setDate(d.getDate()+i);
+            const dn = dayNames[d.getDay()];
+            const label = d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+            const cls = timetable[dn] || [];
+            plan += `\n**${label}:**\n`;
+            if (cls.length > 0) { plan += `  📖 ${cls.map(s => { const c=courses.find(x=>x.id===s.courseId); return `${c?c.name:'?'} (${s.time})`; }).join(', ')}\n`; }
+            if (weak.length > 0 && cls.length < 4) { plan += `  💡 Focus: Review **${weak[i%weak.length].name}**\n`; }
+        }
+        plan += `\n✨ **Tips:** Use Pomodoro (50min work / 10min break). Review notes within 24hrs.`;
+        return plan;
+    }
+
+    if (name === "getInsights") {
+        const type = args.type || 'all';
+        const courses = getCourses();
+        const events = getEvents();
+        const courseAtts = calculateAllAttendance();
+        const overall = calculateOverallAttendance();
+        let out = `📊 **Academic Insights**\n\n`;
+        if (type==='attendance'||type==='all') {
+            out += `**📈 Attendance:** ${overall.percentage}% (${overall.attended}/${overall.total})\n`;
+            out += overall.percentage>=75 ? '✅ Above threshold\n' : '⚠️ Below 75% threshold!\n';
+            courses.forEach(c => { const s=courseAtts[c.id]; if(!s)return; const sk=predictSkippable(c.id); const rq=predictRequired(c.id); out += `- ${s.percentage>=75?'✅':'🔴'} **${c.name}**: ${s.percentage}%`; if(sk>0)out+=` (can skip ${sk})`; if(rq>0)out+=` (need ${rq} more)`; out+='\n'; });
+            out += '\n';
+        }
+        if (type==='tasks'||type==='all') {
+            const done=events.filter(e=>e.done).length; const pend=events.filter(e=>!e.done);
+            const overdue=pend.filter(e=>new Date(e.date)<new Date(todayStr()));
+            out += `**📝 Tasks:** ${done} done, ${pend.length} pending`;
+            if(overdue.length>0) out += `, ${overdue.length} overdue 🚨`;
+            out += '\n\n';
+        }
+        if (type==='all'||type==='overview') {
+            let score=0;
+            if(overall.percentage>=75)score+=40; else if(overall.percentage>=60)score+=20;
+            const overdue=events.filter(e=>!e.done&&new Date(e.date)<new Date(todayStr()));
+            if(overdue.length===0)score+=30; else if(overdue.length<=2)score+=15;
+            if(courses.length>0)score+=15; if(Object.keys(getTimetable()).length>0)score+=15;
+            out += `**🏆 Health Score: ${score}/100** — `;
+            if(score>=80)out+='Amazing! 🎉'; else if(score>=60)out+='Good progress!'; else out+='Room to improve!';
+        }
+        return out;
+    }
+
+    if (name === "manageTask") {
+        const { action, taskTitle, newTitle, newDate } = args;
+        let localEvents = getEvents();
+        const idx = localEvents.findIndex(e => e.title.toLowerCase().includes(taskTitle.toLowerCase()));
+        if (idx === -1) return `I couldn't find a task matching **"${taskTitle}"**.`;
+        const task = localEvents[idx];
+        if (action === 'complete') { localEvents[idx].done = true; saveEvents(localEvents); return `✅ Marked **"${task.title}"** as complete!`; }
+        if (action === 'delete') { const t=task.title; localEvents.splice(idx,1); saveEvents(localEvents); return `🗑️ Deleted **"${t}"**.`; }
+        if (action === 'edit') { if(newTitle)localEvents[idx].title=newTitle; if(newDate)localEvents[idx].date=newDate; saveEvents(localEvents); return `✏️ Updated: **"${localEvents[idx].title}"** on ${localEvents[idx].date}.`; }
+        return 'Unknown task action.';
+    }
+
     return "I received an unknown action. Please try again.";
 }
 
@@ -253,11 +389,18 @@ export async function sendChatMessage(messageHistory) {
             dangerouslyAllowBrowser: true // Required for client-side API requests
         });
 
-        const systemMessage = `You are Lumi, a friendly, personal study assistant for a student diary app.
+        const systemMessage = `You are Lumi ✨, a friendly, warm, and insightful personal study assistant for a student diary app.
+
+PERSONALITY: Encouraging, empathetic, playful. Use occasional emojis. Celebrate achievements. If user seems stressed, be supportive first.
+
+TOOLS: addTask, manageCourse, manageTimetable, manageAttendance, getMotivation (for encouragement), generateStudyPlan (study scheduling), getInsights (academic analytics), manageTask (complete/delete/edit tasks).
+
+NATIVE ABILITIES (no tool needed): Explain concepts, translate text, answer study questions, give tips.
+
 Here is the user's latest local data:
 ${context}
-Answer naturally, keep it relatively concise, and format answers using Markdown when making lists or bolding things. 
-If the user asks you to add a task, use the addTask tool. If they ask to add or remove an opted course, use the manageCourse tool. If they ask to add or remove a class from their weekly timetable/schedule, use the manageTimetable tool. If they ask to mark or remove attendance for a subject, use the manageAttendance tool. Only respond as Lumi. Do NOT expose internal IDs or technical implementation details.`;
+
+RULES: Answer naturally, use Markdown. Use tools when appropriate. For explanations/translations respond directly. Don't expose IDs. Be proactive with suggestions. Only respond as Lumi.`;
 
         const tools = [
             {
@@ -316,12 +459,44 @@ If the user asks you to add a task, use the addTask tool. If they ask to add or 
                         type: "object",
                         properties: {
                             action: { type: "string", description: "'mark' or 'remove'" },
-                            courseName: { type: "string", description: "Name of the course (e.g., 'Math' or 'Physics')." },
-                            date: { type: "string", description: "The date in YYYY-MM-DD format (e.g., today, yesterday, or specific date)." },
-                            status: { type: "string", description: "Attendance status for 'mark' action: 'present' or 'absent'." }
+                            courseName: { type: "string", description: "Name of the course." },
+                            date: { type: "string", description: "Date in YYYY-MM-DD format." },
+                            status: { type: "string", description: "'present' or 'absent' (for 'mark')." }
                         },
                         required: ["action", "courseName", "date"]
                     }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "getMotivation",
+                    description: "Returns a motivational quote. Use when user feels stressed, tired, demotivated, or asks for encouragement.",
+                    parameters: { type: "object", properties: { mood: { type: "string", description: "'stressed','tired','unmotivated','general'" } }, required: [] }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "generateStudyPlan",
+                    description: "Generates a personalized study plan from user's tasks, timetable, and attendance. Use when user asks for a study plan or schedule suggestion.",
+                    parameters: { type: "object", properties: { days: { type: "number", description: "Days to plan (default 7)" }, focusArea: { type: "string", description: "Subject to focus on" } }, required: [] }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "getInsights",
+                    description: "Provides academic analytics, attendance trends, task stats, and health score. Use when user asks how they're doing or wants a performance summary.",
+                    parameters: { type: "object", properties: { type: { type: "string", description: "'attendance','tasks','overview','all'" } }, required: [] }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "manageTask",
+                    description: "Complete, delete, or edit an existing task.",
+                    parameters: { type: "object", properties: { action: { type: "string", description: "'complete','delete','edit'" }, taskTitle: { type: "string", description: "Task title or partial match" }, newTitle: { type: "string", description: "New title (edit only)" }, newDate: { type: "string", description: "New date YYYY-MM-DD (edit only)" } }, required: ["action","taskTitle"] }
                 }
             }
         ];
