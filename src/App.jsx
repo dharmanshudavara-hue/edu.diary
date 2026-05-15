@@ -27,12 +27,13 @@ function OnboardingRoute() {
 
 import { useState } from 'react';
 import IntroAnimation from './components/IntroAnimation';
+import ClickSpark from './components/ClickSpark';
 
 export default function App() {
     const [showIntro, setShowIntro] = useState(!sessionStorage.getItem('introPlayed'));
 
     return (
-        <>
+        <ClickSpark sparkColor="var(--accent)" sparkSize={12} sparkRadius={20} sparkCount={8} duration={500}>
             {showIntro && <IntroAnimation onComplete={() => {
                 sessionStorage.setItem('introPlayed', 'true');
                 setShowIntro(false);
@@ -60,6 +61,6 @@ export default function App() {
                     </Routes>
                 </BrowserRouter>
             )}
-        </>
+        </ClickSpark>
     );
 }
