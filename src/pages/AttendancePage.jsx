@@ -68,7 +68,7 @@ export default function AttendancePage() {
                         <p style={{ fontSize: 18, opacity: 0.5 }}>No courses added yet. Complete onboarding first! ✏️</p>
                     </div>
                 ) : (
-                    <div className="att-grid">
+                    <div className="att-grid hd-stagger">
                         {courses.map(c => {
                             const s = allStats[c.id] || { attended: 0, total: 0, percentage: 0 };
                             const canSkip = predictSkippable(c.id);
@@ -282,8 +282,13 @@ const styles = `
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
-.att-course-card { transition: transform 0.1s; }
-.att-course-card:hover { transform: rotate(0deg) !important; }
+.att-course-card {
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.att-course-card:hover {
+  transform: rotate(0deg) translateY(-3px) !important;
+  box-shadow: var(--shadow) !important;
+}
 .att-course-header {
   display: flex;
   justify-content: space-between;

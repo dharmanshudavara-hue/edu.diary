@@ -5,6 +5,7 @@
 /* ── Design Tokens ── */
 :root {
   --bg: #fdfbf7;
+  --bg-alt: #f5f0e8;
   --fg: #2d2d2d;
   --muted: #e5e0d8;
   --accent: #ff4d4d;
@@ -25,6 +26,29 @@
   --shadow-lg: 8px 8px 0px 0px #2d2d2d;
   --shadow-hover: 2px 2px 0px 0px #2d2d2d;
   --shadow-blue: 3px 3px 0px 0px rgba(45, 93, 161, 0.2);
+
+  --transition-fast: 0.15s ease;
+  --transition-med: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}
+
+/* ── Dark Mode Tokens ── */
+[data-theme="dark"] {
+  --bg: #1a1a2e;
+  --bg-alt: #16213e;
+  --fg: #e8e6e3;
+  --muted: #2a2a4a;
+  --accent: #ff6b6b;
+  --border: #4a4a6a;
+  --blue: #5b9bd5;
+  --postit: #2d2d4e;
+  --white: #222244;
+
+  --shadow: 4px 4px 0px 0px #0a0a1a;
+  --shadow-sm: 3px 3px 0px 0px rgba(10, 10, 26, 0.25);
+  --shadow-lg: 8px 8px 0px 0px #0a0a1a;
+  --shadow-hover: 2px 2px 0px 0px #0a0a1a;
+  --shadow-blue: 3px 3px 0px 0px rgba(91, 155, 213, 0.3);
 }
 
 /* ── Reset ── */
@@ -45,6 +69,7 @@ body {
   font-family: var(--font-body);
   color: var(--fg);
   line-height: 1.5;
+  transition: background-color var(--transition-med), color var(--transition-med);
 }
 
 /* ── Scrollbar ── */
@@ -78,6 +103,35 @@ body {
   70% { transform: scale(1.05); }
   100% { transform: scale(1); opacity: 1; }
 }
+@keyframes hd-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes hd-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+@keyframes hd-slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes hd-scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Stagger children animation utility */
+.hd-stagger > * {
+  animation: hd-slideUp 0.35s ease-out both;
+}
+.hd-stagger > *:nth-child(1) { animation-delay: 0s; }
+.hd-stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.hd-stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.hd-stagger > *:nth-child(4) { animation-delay: 0.18s; }
+.hd-stagger > *:nth-child(5) { animation-delay: 0.24s; }
+.hd-stagger > *:nth-child(6) { animation-delay: 0.30s; }
+.hd-stagger > *:nth-child(7) { animation-delay: 0.36s; }
+.hd-stagger > *:nth-child(8) { animation-delay: 0.42s; }
 
 /* ── Typography ── */
 h1, h2, h3, h4, h5, h6 {
@@ -98,11 +152,26 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-wobbly);
   box-shadow: var(--shadow);
   cursor: pointer;
-  transition: all 0.1s;
+  transition: all var(--transition-fast);
   display: inline-flex;
   align-items: center;
   gap: 8px;
   user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+.hd-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.hd-btn:hover::after {
+  opacity: 1;
+  animation: hd-shimmer 0.6s ease-out;
 }
 .hd-btn:hover {
   background: var(--accent);
@@ -113,6 +182,10 @@ h1, h2, h3, h4, h5, h6 {
 .hd-btn:active {
   box-shadow: none;
   transform: translate(4px, 4px);
+}
+.hd-btn:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
 }
 .hd-btn--secondary {
   background: var(--muted);
@@ -146,16 +219,20 @@ h1, h2, h3, h4, h5, h6 {
   border: 2px solid var(--border);
   border-radius: var(--radius-wobbly-alt);
   outline: none;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
   box-shadow: var(--shadow-sm);
 }
 .hd-input::placeholder {
   color: rgba(45, 45, 45, 0.35);
   font-family: var(--font-body);
 }
+[data-theme="dark"] .hd-input::placeholder {
+  color: rgba(232, 230, 227, 0.35);
+}
 .hd-input:focus {
   border-color: var(--blue);
   box-shadow: var(--shadow-blue);
+  transform: scale(1.01);
 }
 
 .hd-label {
@@ -176,7 +253,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 2px solid var(--border);
   border-radius: var(--radius-wobbly-alt);
   outline: none;
-  transition: all 0.15s;
+  transition: all var(--transition-fast);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   appearance: none;
@@ -197,13 +274,34 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow);
   padding: 24px;
   position: relative;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.hd-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 6px 6px 0px 0px var(--border);
 }
 .hd-card--flat {
   box-shadow: var(--shadow-sm);
   border-width: 2px;
 }
+.hd-card--flat:hover {
+  box-shadow: var(--shadow);
+}
 .hd-card--postit {
   background: var(--postit);
+}
+
+/* ── Glass card variant ── */
+.hd-card--glass {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+[data-theme="dark"] .hd-card--glass {
+  background: rgba(34, 34, 68, 0.4);
+  border-color: rgba(74, 74, 106, 0.4);
 }
 
 /* ── Tape & Tack decorations ── */
@@ -252,6 +350,10 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-body);
   font-size: 12px;
   color: var(--fg);
+  transition: transform var(--transition-fast);
+}
+.hd-badge:hover {
+  transform: scale(1.05);
 }
 .hd-badge--accent {
   background: var(--accent);
@@ -279,11 +381,21 @@ h1, h2, h3, h4, h5, h6 {
   position: fixed;
   inset: 0;
   background: rgba(45, 45, 45, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
+  animation: hd-overlayFade 0.2s ease-out;
+}
+[data-theme="dark"] .hd-overlay {
+  background: rgba(10, 10, 26, 0.6);
+}
+@keyframes hd-overlayFade {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(4px); }
 }
 .hd-modal {
   background: var(--white);
@@ -364,6 +476,9 @@ h1, h2, h3, h4, h5, h6 {
 .hd-table tr:hover td {
   background: rgba(253, 251, 247, 0.7);
 }
+[data-theme="dark"] .hd-table tr:hover td {
+  background: rgba(42, 42, 74, 0.5);
+}
 
 /* ── Checkbox (hand-drawn style) ── */
 .hd-checkbox {
@@ -433,4 +548,60 @@ h1, h2, h3, h4, h5, h6 {
   height: 100%;
   border-radius: 4px;
   transition: width 0.6s ease;
+}
+
+/* ── Focus-visible global ── */
+*:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* ── Skip nav link (accessibility) ── */
+.skip-nav {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 14px;
+  z-index: 9999;
+  border-radius: 4px;
+  transition: top 0.2s;
+}
+.skip-nav:focus {
+  top: 8px;
+}
+
+/* ── Form group spacing ── */
+.hd-form-group {
+  margin-bottom: 16px;
+}
+
+/* ── Popup close button ── */
+.popup-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--fg);
+  opacity: 0.4;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.popup-close:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+/* ── Smooth theme transition for all colored elements ── */
+.hd-card, .hd-btn, .hd-input, .hd-badge, .hd-select, .navbar,
+.hd-modal, .hd-overlay, .hd-tape, .hd-tack {
+  transition: background-color var(--transition-med),
+              color var(--transition-med),
+              border-color var(--transition-med),
+              box-shadow var(--transition-med);
 }

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { getUser, logoutUser } from '../utils/storage';
+import { exportAsJSON, exportAttendanceCSV, exportTasksCSV } from '../utils/exportData';
+import ThemeToggle from './ThemeToggle';
 import avatar1 from '../assets/avatars/avatar1.png';
 import avatar2 from '../assets/avatars/avatar2.png';
 import avatar3 from '../assets/avatars/avatar3.png';
@@ -18,6 +20,7 @@ const AVATAR_MAP = {
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
   const user = getUser();
@@ -39,67 +42,92 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="navbar">
+    <nav className="navbar" role="navigation" aria-label="Main navigation">
       <div className="navbar-inner">
-        <div className="nav-brand" onClick={() => navigate('/dashboard')}>
+        <div className="nav-brand" onClick={() => navigate('/dashboard')} tabIndex={0} onKeyDown={e => e.key === 'Enter' && navigate('/dashboard')}>
           edu<span className="nav-brand-dot">.</span>Diary <span style={{ fontSize: 18 }}>📓</span>
         </div>
 
-        <ul className="nav-links">
-          <li><NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Dashboard</NavLink></li>
-          <li><NavLink to="/attendance" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Attendance</NavLink></li>
-          <li><NavLink to="/schedule" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Schedule</NavLink></li>
-          <li><NavLink to="/tasks" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Tasks 📝</NavLink></li>
+        <ul className="nav-links" role="menubar">
+          <li role="none"><NavLink to="/dashboard" role="menuitem" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Dashboard</NavLink></li>
+          <li role="none"><NavLink to="/attendance" role="menuitem" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Attendance</NavLink></li>
+          <li role="none"><NavLink to="/schedule" role="menuitem" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Schedule</NavLink></li>
+          <li role="none"><NavLink to="/tasks" role="menuitem" className={({ isActive }) => isActive ? 'nav-link nav-link--active' : 'nav-link'}>Tasks 📝</NavLink></li>
         </ul>
 
-        <div className="nav-user-wrap" ref={ref}>
-          <button className="nav-user-btn" onClick={() => setOpen(v => !v)} id="user-avatar-btn" style={{ padding: avatarImg ? 0 : '' }}>
-            {avatarImg ? (
-              <img src={avatarImg} alt="Avatar" className="nav-user-img" />
-            ) : initial}
-            <div className="nav-online-dot" />
-          </button>
+        <div className="nav-right-group">
+          <ThemeToggle />
 
-          {open && (
-            <div className="nav-dropdown" style={{ animation: 'hd-slideDown 0.2s ease-out' }}>
-              <div className="hd-tape" />
-              <div className="nav-dd-tack" />
+          <div className="nav-user-wrap" ref={ref}>
+            <button className="nav-user-btn" onClick={() => setOpen(v => !v)} id="user-avatar-btn" style={{ padding: avatarImg ? 0 : '' }} aria-haspopup="true" aria-expanded={open}>
+              {avatarImg ? (
+                <img src={avatarImg} alt="Avatar" className="nav-user-img" />
+              ) : initial}
+              <div className="nav-online-dot" />
+            </button>
 
-              <div className="nav-dd-header">
-                <div className="nav-avatar-lg" style={{ padding: avatarImg ? 0 : '' }}>
+            {open && (
+              <div className="nav-dropdown" style={{ animation: 'hd-slideDown 0.2s ease-out' }} role="menu">
+                <div className="hd-tape" />
+                <div className="nav-dd-tack" />
+
+                <div className="nav-dd-header">
+                  <div className="nav-avatar-lg" style={{ padding: avatarImg ? 0 : '' }}>
                    {avatarImg ? (
                     <img src={avatarImg} alt="Avatar" className="nav-user-img" />
                    ) : initial}
+                  </div>
+                  <div>
+                    <div className="nav-dd-name">{user?.name || 'Student'}</div>
+                    <div className="nav-dd-id">{user?.username || ''}</div>
+                    <div className="hd-badge" style={{ marginTop: 4 }}>✏️ Student</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="nav-dd-name">{user?.name || 'Student'}</div>
-                  <div className="nav-dd-id">{user?.username || ''}</div>
-                  <div className="hd-badge" style={{ marginTop: 4 }}>✏️ Student</div>
-                </div>
+
+                <ul className="nav-dd-menu" role="none">
+                  <li role="none"><button role="menuitem" className="nav-dd-item" onClick={() => { setOpen(false); navigate('/dashboard'); }}>
+                    <span className="nav-dd-icon">📊</span> Dashboard
+                  </button></li>
+                  <li role="none"><button role="menuitem" className="nav-dd-item" onClick={() => { setOpen(false); navigate('/attendance'); }}>
+                    <span className="nav-dd-icon">📋</span> Attendance
+                  </button></li>
+                  <li role="none"><button role="menuitem" className="nav-dd-item" onClick={() => { setOpen(false); navigate('/schedule'); }}>
+                    <span className="nav-dd-icon">📅</span> Schedule
+                  </button></li>
+                  <li role="none"><button role="menuitem" className="nav-dd-item" onClick={() => { setOpen(false); navigate('/tasks'); }}>
+                    <span className="nav-dd-icon">📝</span> Tasks
+                  </button></li>
+                </ul>
+
+                <hr className="nav-dd-divider" />
+
+                {/* Export section */}
+                <button className="nav-dd-item" onClick={() => setShowExport(v => !v)}>
+                  <span className="nav-dd-icon">💾</span> Export Data {showExport ? '▲' : '▼'}
+                </button>
+
+                {showExport && (
+                  <div className="nav-dd-export-sub">
+                    <button className="nav-dd-export-btn" onClick={() => { exportAsJSON(); setOpen(false); }}>
+                      📦 Full Backup (JSON)
+                    </button>
+                    <button className="nav-dd-export-btn" onClick={() => { exportAttendanceCSV(); setOpen(false); }}>
+                      📋 Attendance (CSV)
+                    </button>
+                    <button className="nav-dd-export-btn" onClick={() => { exportTasksCSV(); setOpen(false); }}>
+                      📝 Tasks (CSV)
+                    </button>
+                  </div>
+                )}
+
+                <hr className="nav-dd-divider" />
+
+                <button className="nav-dd-logout" onClick={logout}>
+                  <span className="nav-dd-icon nav-dd-icon--danger">🚪</span> Log out
+                </button>
               </div>
-
-              <ul className="nav-dd-menu">
-                <li><button className="nav-dd-item" onClick={() => { setOpen(false); navigate('/dashboard'); }}>
-                  <span className="nav-dd-icon">📊</span> Dashboard
-                </button></li>
-                <li><button className="nav-dd-item" onClick={() => { setOpen(false); navigate('/attendance'); }}>
-                  <span className="nav-dd-icon">📋</span> Attendance
-                </button></li>
-                <li><button className="nav-dd-item" onClick={() => { setOpen(false); navigate('/schedule'); }}>
-                  <span className="nav-dd-icon">📅</span> Schedule
-                </button></li>
-                <li><button className="nav-dd-item" onClick={() => { setOpen(false); navigate('/tasks'); }}>
-                  <span className="nav-dd-icon">📝</span> Tasks
-                </button></li>
-              </ul>
-
-              <hr className="nav-dd-divider" />
-
-              <button className="nav-dd-logout" onClick={logout}>
-                <span className="nav-dd-icon nav-dd-icon--danger">🚪</span> Log out
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -133,6 +161,10 @@ const navStyles = `
   cursor: pointer;
   letter-spacing: -0.5px;
   user-select: none;
+  transition: transform 0.2s;
+}
+.nav-brand:hover {
+  transform: scale(1.03);
 }
 .nav-brand-dot { color: var(--accent); }
 
@@ -147,10 +179,10 @@ const navStyles = `
   color: var(--fg);
   text-decoration: none;
   opacity: 0.6;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, transform 0.15s;
   position: relative;
 }
-.nav-link:hover { opacity: 1; }
+.nav-link:hover { opacity: 1; transform: translateY(-1px); }
 .nav-link--active {
   opacity: 1;
   font-weight: 700;
@@ -165,6 +197,12 @@ const navStyles = `
   bottom: -4px;
   left: 0;
   right: 0;
+}
+
+.nav-right-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .nav-user-wrap { position: relative; }
@@ -183,7 +221,7 @@ const navStyles = `
   font-weight: 700;
   font-size: 16px;
   color: var(--fg);
-  transition: all 0.1s;
+  transition: all 0.15s;
   position: relative;
 }
 .nav-user-btn:hover {
@@ -312,6 +350,33 @@ const navStyles = `
   border-top: 2px dashed var(--muted);
   margin: 4px 18px;
 }
+
+/* Export sub-menu */
+.nav-dd-export-sub {
+  padding: 4px 18px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: hd-fadeIn 0.2s ease-out;
+}
+.nav-dd-export-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--fg);
+  padding: 6px 12px;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 6px;
+  transition: all 0.1s;
+}
+.nav-dd-export-btn:hover {
+  background: var(--bg);
+  padding-left: 16px;
+  color: var(--blue);
+}
+
 .nav-dd-logout {
   display: flex;
   align-items: center;

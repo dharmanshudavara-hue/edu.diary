@@ -57,6 +57,10 @@ export default function DashboardPage() {
 
     const dayLabel = DAY_LABELS[todayDay] || todayDay;
 
+    // Time-based greeting
+    const hour = new Date().getHours();
+    const timeGreeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
     return (
         <Layout>
             <EventPopup />
@@ -65,7 +69,7 @@ export default function DashboardPage() {
                 {/* Greeting */}
                 <div className="dash-header">
                     <div>
-                        <h1 className="dash-greeting">Hey, {user?.name || 'Student'}! 👋</h1>
+                        <h1 className="dash-greeting">{timeGreeting}, {user?.name || 'Student'}! 👋</h1>
                         <p className="hd-text-muted" style={{ fontSize: 16 }}>
                             Here's your diary for today — {dayLabel}, {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
@@ -73,7 +77,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Stats grid */}
-                <div className="dash-stats">
+                <div className="dash-stats hd-stagger">
                     <div className="dash-stat-card" style={{ borderRadius: '62% 38% 70% 30% / 44% 58% 42% 56%' }}>
                         <div className="dash-stat-num">{overall.percentage}%</div>
                         <div className="dash-stat-label">Overall Attendance</div>
@@ -167,7 +171,7 @@ export default function DashboardPage() {
                     {courses.length === 0 ? (
                         <p className="hd-text-muted hd-text-center">No courses yet</p>
                     ) : (
-                        <div className="dash-att-list">
+                        <div className="dash-att-list hd-stagger">
                             {courses.map(c => {
                                 const s = allStats[c.id] || { attended: 0, total: 0, percentage: 0 };
                                 return (
@@ -252,7 +256,10 @@ const styles = `
   text-align: center;
   transition: transform 0.1s;
 }
-.dash-stat-card:hover { transform: rotate(-1deg); }
+.dash-stat-card:hover {
+  transform: translateY(-4px) rotate(-1deg);
+  box-shadow: 6px 6px 0px 0px var(--border);
+}
 .dash-stat-num {
   font-family: var(--font-heading);
   font-weight: 700;
