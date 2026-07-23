@@ -1,5 +1,5 @@
-import { getCourses, saveCourses, getTodayClasses, getEvents, saveEvents, todayStr, getTimetable, saveTimetable, getAttendance, saveAttendance } from "./storage";
-import { calculateAllAttendance, calculateOverallAttendance, predictSkippable, predictRequired } from "./attendance";
+import { getCourses, saveCourses, getTodayClasses, getEvents, saveEvents, todayStr, getTimetable, saveTimetable, getAttendance, saveAttendance, getLumiPrefs, getLumiMemory } from "./storage";
+import { calculateAllAttendance, calculateOverallAttendance, predictSkippable, predictRequired, predictSkippableWithGoal, predictRequiredWithGoal } from "./attendance";
 
 const QUOTES = {
     stressed: [
@@ -30,6 +30,13 @@ const QUOTES = {
     ]
 };
 
+const PERSONALITY_PROMPTS = {
+    buddy: "You're encouraging, empathetic, and playful. Use emojis freely (but not excessively). Celebrate achievements warmly. If the user seems stressed, be supportive first before giving advice. Keep a friendly, warm tone like a close study partner.",
+    coach: "You're a strict but caring academic coach. Be direct and hold the user accountable. Minimize emojis (use sparingly). Push them to do better. Don't sugarcoat poor performance. Use motivational but firm language.",
+    minimal: "Be concise and factual. Minimal to no emojis. Give information efficiently without fluff or filler. Short sentences. Get straight to the point. Only elaborate when specifically asked.",
+    genz: "You speak casual Gen-Z. Use slang like 'no cap', 'lowkey', 'slay', 'fr fr', 'bet', 'bruh'. Be very playful, use lots of emojis and internet humor. Keep it real and relatable. Hype up achievements with energy."
+};
+
 /**
  * Builds the context string from local data to send to the AI.
  */
@@ -39,10 +46,14 @@ function buildContext() {
     const courses = getCourses();
     const todayClasses = getTodayClasses();
     const events = getEvents();
+    const prefs = getLumiPrefs();
+    const memory = getLumiMemory();
 
     const now = new Date();
     const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const goalPct = prefs.attendanceGoal || 75;
+    const hasCustomGoal = goalPct !== 75;
 
     let context = `Context Data:\n`;
     context += `Today is: ${dayOfWeek}, ${todayStr()} (${timeStr})\n`;
@@ -55,6 +66,13 @@ function buildContext() {
         let contextStr = `- ${c.name}: ${stat ? stat.percentage : 0}%`;
         if (skip > 0) contextStr += ` (Can skip ${skip} class(es) and stay >=75%)`;
         else if (req > 0) contextStr += ` (Must attend ${req} class(es) to reach 75%)`;
+        // Add custom goal info if different from 75%
+        if (hasCustomGoal) {
+            const customSkip = predictSkippableWithGoal(c.id, goalPct);
+            const customReq = predictRequiredWithGoal(c.id, goalPct);
+            if (customSkip > 0) contextStr += ` [User goal ${goalPct}%: can skip ${customSkip}]`;
+            else if (customReq > 0) contextStr += ` [User goal ${goalPct}%: need ${customReq} more]`;
+        }
         context += contextStr + '\n';
     });
     context += `Today's Schedule:\n`;
@@ -91,7 +109,70 @@ function buildContext() {
         });
     }
 
+    // User preferences & memory
+    context += `\nUser Preferences:\n`;
+    context += `- Attendance Goal: ${goalPct}%${hasCustomGoal ? ' (custom, not default 75%)' : ' (default)'}\n`;
+    context += `- Preferred Study Time: ${prefs.preferredStudyTime || 'not set'}\n`;
+    if (prefs.studyGoal) context += `- Study Goal: ${prefs.studyGoal}\n`;
+    context += `- Chat History: ${memory.chatCount || 0} conversations with Lumi\n`;
+    if (memory.lastActiveTime) {
+        const lastActive = new Date(memory.lastActiveTime);
+        const hoursAgo = Math.round((now - lastActive) / (1000 * 60 * 60));
+        context += `- Last Active: ${hoursAgo < 1 ? 'just now' : hoursAgo < 24 ? hoursAgo + ' hours ago' : Math.round(hoursAgo / 24) + ' days ago'}\n`;
+    }
+    // Detect peak activity hours from task completions
+    if (memory.taskCompletionTimes && memory.taskCompletionTimes.length >= 5) {
+        const hourCounts = {};
+        memory.taskCompletionTimes.forEach(t => {
+            const h = t.hour;
+            hourCounts[h] = (hourCounts[h] || 0) + 1;
+        });
+        const peakHour = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
+        if (peakHour) {
+            const h = parseInt(peakHour[0]);
+            const label = h < 12 ? `${h || 12} AM` : `${h === 12 ? 12 : h - 12} PM`;
+            context += `- Peak Activity: Most tasks completed around ${label}\n`;
+        }
+    }
+
     return context;
+}
+
+/**
+ * Builds the appropriate system message with dynamic personality.
+ */
+function buildSystemMessage(context, personalityKey) {
+    const personality = PERSONALITY_PROMPTS[personalityKey] || PERSONALITY_PROMPTS.buddy;
+    const prefs = getLumiPrefs();
+    const memory = getLumiMemory();
+
+    // Adaptive greeting instruction based on memory
+    let greetingHint = '';
+    if (!memory.lastActiveTime || memory.chatCount <= 1) {
+        greetingHint = 'This is a new user — be extra welcoming and introduce yourself warmly.';
+    } else {
+        const hoursAgo = (Date.now() - new Date(memory.lastActiveTime).getTime()) / (1000 * 60 * 60);
+        if (hoursAgo > 72) {
+            greetingHint = 'The user hasn\'t chatted in a while — welcome them back warmly.';
+        } else if (memory.chatCount > 20) {
+            greetingHint = 'This is a frequent user — be casual and natural, no need for formal intros.';
+        }
+    }
+
+    return `You are Lumi ✨, a personal study assistant for a student diary app.
+
+PERSONALITY: ${personality}
+${greetingHint ? `\nGREETING STYLE: ${greetingHint}` : ''}
+${prefs.studyGoal ? `\nUSER'S STUDY GOAL: "${prefs.studyGoal}" — Keep this in mind and reference it when relevant.` : ''}
+
+TOOLS: addTask, manageCourse, manageTimetable, manageAttendance, getMotivation (for encouragement), generateStudyPlan (study scheduling), getInsights (academic analytics), manageTask (complete/delete/edit tasks).
+
+NATIVE ABILITIES (no tool needed): Explain concepts, translate text, answer study questions, give tips.
+
+Here is the user's latest local data:
+${context}
+
+RULES: Answer naturally, use Markdown. Use tools when appropriate. For explanations/translations respond directly. Don't expose IDs. Be proactive with suggestions. Only respond as Lumi.${prefs.attendanceGoal !== 75 ? `\nIMPORTANT: The user has set a personal attendance goal of ${prefs.attendanceGoal}% (university minimum is 75%). When discussing attendance, reference THEIR goal of ${prefs.attendanceGoal}%, not just the 75% minimum.` : ''}`;
 }
 
 /**
@@ -353,7 +434,9 @@ export async function sendChatMessage(messageHistory) {
                 body: JSON.stringify({
                     context,
                     messages: rawHistory,
-                    lastMessage
+                    lastMessage,
+                    prefs: getLumiPrefs(),
+                    memory: getLumiMemory()
                 })
             });
 
@@ -389,18 +472,7 @@ export async function sendChatMessage(messageHistory) {
             dangerouslyAllowBrowser: true // Required for client-side API requests
         });
 
-        const systemMessage = `You are Lumi ✨, a friendly, warm, and insightful personal study assistant for a student diary app.
-
-PERSONALITY: Encouraging, empathetic, playful. Use occasional emojis. Celebrate achievements. If user seems stressed, be supportive first.
-
-TOOLS: addTask, manageCourse, manageTimetable, manageAttendance, getMotivation (for encouragement), generateStudyPlan (study scheduling), getInsights (academic analytics), manageTask (complete/delete/edit tasks).
-
-NATIVE ABILITIES (no tool needed): Explain concepts, translate text, answer study questions, give tips.
-
-Here is the user's latest local data:
-${context}
-
-RULES: Answer naturally, use Markdown. Use tools when appropriate. For explanations/translations respond directly. Don't expose IDs. Be proactive with suggestions. Only respond as Lumi.`;
+        const systemMessage = buildSystemMessage(context, getLumiPrefs().personality);
 
         const tools = [
             {

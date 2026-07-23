@@ -191,3 +191,63 @@ export function saveEvents(events) {
     d.events = events;
     saveData(d);
 }
+
+// ─── Lumi Preferences ───
+
+const DEFAULT_LUMI_PREFS = {
+    attendanceGoal: 75,
+    personality: null,          // null = not yet chosen (triggers first-time picker)
+    preferredStudyTime: 'evening',
+    studyGoal: '',
+};
+
+export function getLumiPrefs() {
+    const d = getData();
+    return { ...DEFAULT_LUMI_PREFS, ...(d?.lumiPrefs || {}) };
+}
+
+export function saveLumiPrefs(prefs) {
+    const d = getData() || {};
+    d.lumiPrefs = { ...(d.lumiPrefs || {}), ...prefs };
+    saveData(d);
+}
+
+// ─── Lumi Memory (passive tracking) ───
+
+const DEFAULT_LUMI_MEMORY = {
+    lastActiveTime: null,
+    taskCompletionTimes: [],
+    chatCount: 0,
+    topicsAsked: [],
+};
+
+export function getLumiMemory() {
+    const d = getData();
+    return { ...DEFAULT_LUMI_MEMORY, ...(d?.lumiMemory || {}) };
+}
+
+export function saveLumiMemory(memory) {
+    const d = getData() || {};
+    d.lumiMemory = { ...DEFAULT_LUMI_MEMORY, ...(d.lumiMemory || {}), ...memory };
+    saveData(d);
+}
+
+export function recordTaskCompletion() {
+    const mem = getLumiMemory();
+    const now = new Date();
+    mem.taskCompletionTimes = [
+        ...(mem.taskCompletionTimes || []).slice(-49),
+        { hour: now.getHours(), dayOfWeek: now.getDay(), timestamp: now.toISOString() }
+    ];
+    saveLumiMemory(mem);
+}
+
+export function recordChatInteraction(topic) {
+    const mem = getLumiMemory();
+    mem.chatCount = (mem.chatCount || 0) + 1;
+    mem.lastActiveTime = new Date().toISOString();
+    if (topic) {
+        mem.topicsAsked = [...(mem.topicsAsked || []).slice(-19), topic];
+    }
+    saveLumiMemory(mem);
+}

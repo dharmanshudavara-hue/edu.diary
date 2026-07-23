@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { getEvents, saveEvents, todayStr } from '../utils/storage';
+import { getEvents, saveEvents, todayStr, recordTaskCompletion } from '../utils/storage';
 import { showUndo } from '../components/UndoSnackbar';
 import PomodoroTimer from '../components/PomodoroTimer';
 
@@ -52,6 +52,7 @@ export default function TasksPage() {
         saveEvents(updated);
 
         if (!ev.done) {
+            recordTaskCompletion();
             showUndo(`"${ev.title}" marked as done`, () => {
                 const reverted = updated.map(e => 
                     e.id === id ? { ...e, done: false } : e

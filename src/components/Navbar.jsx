@@ -122,6 +122,12 @@ export default function Navbar() {
 
                 <hr className="nav-dd-divider" />
 
+                <button role="menuitem" className="nav-dd-item" onClick={() => { setOpen(false); navigate('/lumi-settings'); }}>
+                    <span className="nav-dd-icon">⚙️</span> Lumi Settings
+                </button>
+
+                <hr className="nav-dd-divider" />
+
                 <button className="nav-dd-logout" onClick={logout}>
                   <span className="nav-dd-icon nav-dd-icon--danger">🚪</span> Log out
                 </button>

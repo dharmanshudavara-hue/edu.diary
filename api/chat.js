@@ -127,6 +127,12 @@ const tools = [
         }
     }
 ];
+const PERSONALITY_PROMPTS = {
+    buddy: "You're encouraging, empathetic, and playful. Use emojis freely (but not excessively). Celebrate achievements warmly. If the user seems stressed, be supportive first before giving advice. Keep a friendly, warm tone like a close study partner.",
+    coach: "You're a strict but caring academic coach. Be direct and hold the user accountable. Minimize emojis (use sparingly). Push them to do better. Don't sugarcoat poor performance. Use motivational but firm language.",
+    minimal: "Be concise and factual. Minimal to no emojis. Give information efficiently without fluff or filler. Short sentences. Get straight to the point. Only elaborate when specifically asked.",
+    genz: "You speak casual Gen-Z. Use slang like 'no cap', 'lowkey', 'slay', 'fr fr', 'bet', 'bruh'. Be very playful, use lots of emojis and internet humor. Keep it real and relatable. Hype up achievements with energy."
+};
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {
@@ -139,7 +145,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { context, messages, lastMessage } = req.body;
+        const { context, messages, lastMessage, prefs = {}, memory = {} } = req.body;
 
         if (!lastMessage) {
             return res.status(400).json({ error: "Missing lastMessage in request body." });
@@ -150,13 +156,26 @@ export default async function handler(req, res) {
             baseURL: "https://api.groq.com/openai/v1"
         });
 
-        const systemMessage = `You are Lumi ✨, a friendly, warm, and insightful personal study assistant for a student diary app.
+        const personalityKey = prefs.personality || "buddy";
+        const personality = PERSONALITY_PROMPTS[personalityKey] || PERSONALITY_PROMPTS.buddy;
+        
+        let greetingHint = '';
+        if (!memory.lastActiveTime || memory.chatCount <= 1) {
+            greetingHint = 'This is a new user — be extra welcoming and introduce yourself warmly.';
+        } else {
+            const hoursAgo = (Date.now() - new Date(memory.lastActiveTime).getTime()) / (1000 * 60 * 60);
+            if (hoursAgo > 72) {
+                greetingHint = 'The user hasn\'t chatted in a while — welcome them back warmly.';
+            } else if (memory.chatCount > 20) {
+                greetingHint = 'This is a frequent user — be casual and natural, no need for formal intros.';
+            }
+        }
 
-PERSONALITY:
-- You're encouraging, empathetic, and a bit playful
-- Use occasional emojis to keep things friendly (but don't overdo it)
-- Celebrate the user's achievements and gently nudge them on areas needing improvement
-- If the user seems stressed, be supportive first before giving advice
+        const systemMessage = `You are Lumi ✨, a personal study assistant for a student diary app.
+
+PERSONALITY: ${personality}
+${greetingHint ? `\nGREETING STYLE: ${greetingHint}` : ''}
+${prefs.studyGoal ? `\nUSER'S STUDY GOAL: "${prefs.studyGoal}" — Keep this in mind and reference it when relevant.` : ''}
 
 CAPABILITIES (use the right tool for each):
 - addTask: Add new tasks/reminders
@@ -183,7 +202,7 @@ RULES:
 - For explanations, definitions, translations: respond directly without tools
 - Do NOT expose internal IDs or technical details
 - Be proactive: suggest relevant follow-up actions
-- Only respond as Lumi`;
+- Only respond as Lumi${prefs.attendanceGoal !== 75 ? `\nIMPORTANT: The user has set a personal attendance goal of ${prefs.attendanceGoal}% (university minimum is 75%). When discussing attendance, reference THEIR goal of ${prefs.attendanceGoal}%, not just the 75% minimum.` : ''}`;
 
         // Filter history: must start with "user" role
         let rawHistory = messages || [];

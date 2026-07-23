@@ -98,3 +98,26 @@ export function getBarColor(pct) {
     if (pct >= 60) return '#f59e0b';
     return '#ff4d4d';
 }
+
+/**
+ * Goal-aware: How many classes can be skipped while staying >= goal%
+ */
+export function predictSkippableWithGoal(courseId, goalPct) {
+    const goal = (goalPct || 75) / 100;
+    const { attended, total } = calculateAttendance(courseId);
+    if (total === 0) return 0;
+    const canSkip = Math.floor((attended - goal * total) / goal);
+    return Math.max(0, canSkip);
+}
+
+/**
+ * Goal-aware: How many MORE classes needed to reach goal%
+ */
+export function predictRequiredWithGoal(courseId, goalPct) {
+    const goal = (goalPct || 75) / 100;
+    const { attended, total, percentage } = calculateAttendance(courseId);
+    if (total === 0 || percentage >= goalPct) return 0;
+    const needed = Math.ceil((goal * total - attended) / (1 - goal));
+    return Math.max(0, needed);
+}
+

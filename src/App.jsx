@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import AttendancePage from './pages/AttendancePage';
 import SchedulePage from './pages/SchedulePage';
 import TasksPage from './pages/TasksPage';
+import LumiSettingsPage from './pages/LumiSettingsPage';
 
 function ProtectedRoute({ children }) {
     if (!isLoggedIn()) return <Navigate to="/login" replace />;
@@ -56,6 +57,9 @@ export default function App() {
                         } />
                         <Route path="/tasks" element={
                             <ProtectedRoute><TasksPage /></ProtectedRoute>
+                        } />
+                        <Route path="/lumi-settings" element={
+                            <ProtectedRoute><LumiSettingsPage /></ProtectedRoute>
                         } />
                         <Route path="*" element={<Navigate to="/login" replace />} />
                     </Routes>
