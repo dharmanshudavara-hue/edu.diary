@@ -191,7 +191,10 @@ function executeFunctionCall(name, args) {
         });
         localEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
         saveEvents(localEvents);
-        return `Got it! I have added **"${title}"** to your tasks for ${date === todayStr() ? 'today' : date}.`;
+        return {
+            text: `Got it! I have added **"${title}"** to your tasks for ${date === todayStr() ? 'today' : date}.`,
+            card: { type: 'task', task: localEvents.find(e => e.id === localEvents[localEvents.length-1].id) }
+        };
     }
 
     if (name === "manageCourse") {
@@ -300,7 +303,10 @@ function executeFunctionCall(name, args) {
             }
 
             saveAttendance(attendance);
-            return `I've marked **${course.name}** as **${status}** for ${date}.`;
+            return {
+                text: `I've marked **${course.name}** as **${status}** for ${date}.`,
+                card: { type: 'attendance', courseName: course.name, date, status }
+            };
         } else if (action === "remove") {
             if (!dayRecord) {
                 return `There are no attendance records for ${date}.`;
@@ -401,9 +407,29 @@ function executeFunctionCall(name, args) {
         const idx = localEvents.findIndex(e => e.title.toLowerCase().includes(taskTitle.toLowerCase()));
         if (idx === -1) return `I couldn't find a task matching **"${taskTitle}"**.`;
         const task = localEvents[idx];
-        if (action === 'complete') { localEvents[idx].done = true; saveEvents(localEvents); return `✅ Marked **"${task.title}"** as complete!`; }
-        if (action === 'delete') { const t=task.title; localEvents.splice(idx,1); saveEvents(localEvents); return `🗑️ Deleted **"${t}"**.`; }
-        if (action === 'edit') { if(newTitle)localEvents[idx].title=newTitle; if(newDate)localEvents[idx].date=newDate; saveEvents(localEvents); return `✏️ Updated: **"${localEvents[idx].title}"** on ${localEvents[idx].date}.`; }
+        if (action === 'complete') { 
+            localEvents[idx].done = true; 
+            saveEvents(localEvents); 
+            return {
+                text: `✅ Marked **"${task.title}"** as complete!`,
+                card: { type: 'task', task: localEvents[idx] }
+            };
+        }
+        if (action === 'delete') { 
+            const t = task.title; 
+            localEvents.splice(idx,1); 
+            saveEvents(localEvents); 
+            return `🗑️ Deleted **"${t}"**.`; 
+        }
+        if (action === 'edit') { 
+            if(newTitle) localEvents[idx].title = newTitle; 
+            if(newDate) localEvents[idx].date = newDate; 
+            saveEvents(localEvents); 
+            return {
+                text: `✏️ Updated: **"${localEvents[idx].title}"** on ${localEvents[idx].date}.`,
+                card: { type: 'task', task: localEvents[idx] }
+            };
+        }
         return 'Unknown task action.';
     }
 
@@ -415,7 +441,7 @@ function executeFunctionCall(name, args) {
  * In production: calls the secure /api/chat serverless function.
  * In development: calls Gemini directly (using VITE_GEMINI_API_KEY from .env.local).
  */
-export async function sendChatMessage(messageHistory) {
+export async function sendChatMessage(messageHistory, onChunk) {
     const context = buildContext();
 
     // Prepare history (exclude the last message, which is the current user input)
@@ -445,13 +471,36 @@ export async function sendChatMessage(messageHistory) {
                 throw new Error(errData.error || `Server error ${res.status}`);
             }
 
-            const data = await res.json();
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let fullText = "";
+            let buffer = "";
 
-            if (data.type === "functionCall") {
-                return executeFunctionCall(data.name, data.args);
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // keep last incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const str = line.slice(6);
+                        if (!str.trim()) continue;
+                        try {
+                            const data = JSON.parse(str);
+                            if (data.type === 'text') {
+                                fullText += data.content;
+                                if (onChunk) onChunk(fullText);
+                            } else if (data.type === 'functionCall') {
+                                return executeFunctionCall(data.name, data.args);
+                            }
+                        } catch (e) {} // ignore parsing errors for partial chunks
+                    }
+                }
             }
-
-            return data.content;
+            return fullText;
         } catch (e) {
             console.error("Lumi API error:", e);
             return "Oops! I encountered an error connecting to my AI brain. Please try again later.";
@@ -586,18 +635,35 @@ export async function sendChatMessage(messageHistory) {
                 { role: "system", content: systemMessage },
                 ...openAiHistory
             ],
-            tools: tools
+            tools: tools,
+            stream: true
         });
 
-        const message = result.choices[0].message;
+        let isFunctionCall = false;
+        let functionName = "";
+        let functionArgs = "";
+        let fullText = "";
 
-        if (message.tool_calls && message.tool_calls.length > 0) {
-            const toolCall = message.tool_calls[0];
-            const args = JSON.parse(toolCall.function.arguments);
-            return executeFunctionCall(toolCall.function.name, args);
+        for await (const chunk of result) {
+            const delta = chunk.choices[0]?.delta;
+            if (!delta) continue;
+            
+            if (delta.tool_calls) {
+                isFunctionCall = true;
+                const tc = delta.tool_calls[0];
+                if (tc.function?.name) functionName += tc.function.name;
+                if (tc.function?.arguments) functionArgs += tc.function.arguments;
+            } else if (delta.content) {
+                fullText += delta.content;
+                if (onChunk) onChunk(fullText);
+            }
         }
 
-        return message.content || "I couldn't generate a response.";
+        if (isFunctionCall) {
+            return executeFunctionCall(functionName, JSON.parse(functionArgs || '{}'));
+        }
+
+        return fullText || "I couldn't generate a response.";
     } catch (e) {
         console.error("Lumi AI error:", e);
         return `Oops! I encountered an AI error: ${e.message}`;

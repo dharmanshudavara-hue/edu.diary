@@ -36,6 +36,24 @@ export default function ChatbotWidget() {
         setMessages(prev => [...prev, { role: 'model', parts: "Awesome choice! Let's get to work. 🚀" }]);
     }
 
+    function getSuggestions() {
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 12) return ["What's my schedule today?", "Any deadlines coming up?"];
+        if (hour >= 12 && hour < 17) return ["Give me a quick motivation boost", "Start a focus timer"];
+        if (hour >= 17 && hour < 22) return ["Can I skip classes tomorrow?", "Generate a 3-day study plan"];
+        return ["Summarize my day", "How is my overall attendance?"];
+    }
+
+    function sendSuggestion(text) {
+        if (isLoading) return;
+        setInputMsg(text);
+        // We defer sending to let state update, or we can just send directly
+        setTimeout(() => {
+            const form = document.querySelector('.chatbot-input-area');
+            if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }, 0);
+    }
+
     useEffect(() => {
         if (messagesEndRef.current) {
             messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -56,11 +74,38 @@ export default function ChatbotWidget() {
         setIsLoading(true);
 
         try {
-            const responseText = await sendChatMessage(newHistory);
-            setMessages(prev => [...prev, { role: 'model', parts: responseText }]);
+            const placeholderIdx = newHistory.length;
+            setMessages([...newHistory, { role: 'model', parts: '' }]);
+            
+            const responseText = await sendChatMessage(newHistory, (chunkText) => {
+                setIsLoading(false); // remove typing indicator once streaming starts
+                setMessages(prev => {
+                    const next = [...prev];
+                    next[placeholderIdx] = { role: 'model', parts: chunkText };
+                    return next;
+                });
+            });
+
+            if (typeof responseText === 'object' && responseText !== null && responseText.card) {
+                setMessages(prev => {
+                    const next = [...prev];
+                    next[placeholderIdx] = { role: 'model', parts: responseText.text, card: responseText.card };
+                    return next;
+                });
+            } else {
+                setMessages(prev => {
+                    const next = [...prev];
+                    next[placeholderIdx] = { role: 'model', parts: responseText };
+                    return next;
+                });
+            }
         } catch (err) {
             console.error(err);
-            setMessages(prev => [...prev, { role: 'model', parts: "Oops! Something went wrong retrieving the data." }]);
+            setMessages(prev => {
+                const next = [...prev];
+                next[newHistory.length] = { role: 'model', parts: "Oops! Something went wrong retrieving the data." };
+                return next;
+            });
         } finally {
             setIsLoading(false);
         }
@@ -102,6 +147,28 @@ export default function ChatbotWidget() {
                                             <br />
                                         </span>
                                     ))}
+                                    {m.card && (
+                                        <div className="chatbot-inner-card">
+                                            {m.card.type === 'task' && (
+                                                <div className="chatbot-inner-card-content">
+                                                    <span className="chatbot-inner-card-icon">{m.card.task?.done ? '✅' : '📌'}</span>
+                                                    <div>
+                                                        <strong>{m.card.task?.title}</strong>
+                                                        <div style={{ fontSize: 11, opacity: 0.7 }}>Due: {m.card.task?.date}</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {m.card.type === 'attendance' && (
+                                                <div className="chatbot-inner-card-content">
+                                                    <span className="chatbot-inner-card-icon">{m.card.status === 'present' ? '✅' : '❌'}</span>
+                                                    <div>
+                                                        <strong>{m.card.courseName}</strong>
+                                                        <div style={{ fontSize: 11, opacity: 0.7 }}>{m.card.date} • {m.card.status}</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -130,6 +197,16 @@ export default function ChatbotWidget() {
                         )}
                         <div ref={messagesEndRef} />
                     </div>
+                    
+                    {!needsSetup && (
+                        <div className="chatbot-suggestions">
+                            {getSuggestions().map((s, idx) => (
+                                <button key={idx} className="chatbot-chip" onClick={() => sendSuggestion(s)}>
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     <form onSubmit={handleSend} className="chatbot-input-area">
                         <input 
@@ -284,6 +361,33 @@ const styles = `
 .chatbot-typing {
     opacity: 0.6;
     font-style: italic;
+}
+
+.chatbot-suggestions {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px dashed var(--muted);
+    scrollbar-width: none;
+}
+.chatbot-suggestions::-webkit-scrollbar {
+    display: none;
+}
+.chatbot-chip {
+    flex-shrink: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+.chatbot-chip:hover {
+    background: var(--muted);
+    border-color: var(--accent);
 }
 
 .chatbot-input-area {

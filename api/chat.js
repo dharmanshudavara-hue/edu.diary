@@ -223,24 +223,37 @@ RULES:
                 { role: "system", content: systemMessage },
                 ...openAiHistory
             ],
-            tools: tools
+            tools: tools,
+            stream: true
         });
 
-        const message = result.choices[0].message;
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
 
-        if (message.tool_calls && message.tool_calls.length > 0) {
-            const toolCall = message.tool_calls[0];
-            return res.status(200).json({
-                type: "functionCall",
-                name: toolCall.function.name,
-                args: JSON.parse(toolCall.function.arguments)
-            });
+        let isFunctionCall = false;
+        let functionName = "";
+        let functionArgs = "";
+
+        for await (const chunk of result) {
+            const delta = chunk.choices[0]?.delta;
+            if (!delta) continue;
+            
+            if (delta.tool_calls) {
+                isFunctionCall = true;
+                const tc = delta.tool_calls[0];
+                if (tc.function?.name) functionName += tc.function.name;
+                if (tc.function?.arguments) functionArgs += tc.function.arguments;
+            } else if (delta.content) {
+                res.write(`data: ${JSON.stringify({ type: 'text', content: delta.content })}\n\n`);
+            }
         }
 
-        return res.status(200).json({
-            type: "text",
-            content: message.content || "I processed your request but couldn't generate a response."
-        });
+        if (isFunctionCall) {
+            res.write(`data: ${JSON.stringify({ type: 'functionCall', name: functionName, args: JSON.parse(functionArgs || '{}') })}\n\n`);
+        }
+        
+        res.end();
 
     } catch (e) {
         console.error("Serverless Lumi error:", e);

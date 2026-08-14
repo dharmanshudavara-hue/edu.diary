@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Layout from '../components/Layout';
 import { getCourses, getTimetable, getTodayDay, DAYS, DAY_LABELS, saveCourses, saveTimetable } from '../utils/storage';
+import { parseTimetableFile } from '../utils/visionHandler';
 
 export default function SchedulePage() {
     const [courses, setCoursesState] = useState(getCourses());
@@ -10,6 +11,10 @@ export default function SchedulePage() {
     // Form state for managing
     const [editCourses, setEditCourses] = useState([]);
     const [editTimetable, setEditTimetable] = useState({});
+
+    // AI Upload state
+    const [isParsing, setIsParsing] = useState(false);
+    const fileInputRef = useRef(null);
 
     const todayDay = getTodayDay();
 
@@ -71,6 +76,33 @@ export default function SchedulePage() {
         setShowManage(false);
     }
 
+    async function handleFileUpload(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsParsing(true);
+            const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+            const data = await parseTimetableFile(file, apiKey);
+
+            if (data.courses && data.timetable) {
+                setEditCourses(data.courses);
+                setEditTimetable(data.timetable);
+                setShowManage(true); // Open modal for user to review
+            } else {
+                alert("AI couldn't extract a valid timetable. Please check the file and try again.");
+            }
+        } catch (error) {
+            console.error("Timetable parse error:", error);
+            alert("Error parsing timetable: " + error.message);
+        } finally {
+            setIsParsing(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ""; // Reset input
+            }
+        }
+    }
+
     // Build time slots list (unique sorted times across all days)
     const allTimes = new Set();
     for (const day of DAYS) {
@@ -91,7 +123,23 @@ export default function SchedulePage() {
                         <h1 style={{ fontSize: 32, marginBottom: 4 }}>Class Schedule 📅</h1>
                         <p className="hd-text-muted">Your weekly timetable</p>
                     </div>
-                    <button className="hd-btn" onClick={openManage}>Manage Schedule ✏️</button>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                        <input
+                            type="file"
+                            accept=".pdf, image/png, image/jpeg, image/jpg, image/webp"
+                            style={{ display: 'none' }}
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                        />
+                        <button 
+                            className="hd-btn hd-btn--secondary" 
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isParsing}
+                        >
+                            {isParsing ? "Scanning... ⏳" : "Upload Image/PDF ✨"}
+                        </button>
+                        <button className="hd-btn" onClick={openManage}>Manage Schedule ✏️</button>
+                    </div>
                 </div>
 
                 {isEmpty ? (

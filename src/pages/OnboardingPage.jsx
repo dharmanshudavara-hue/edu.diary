@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUser, saveUser, saveCourses, saveTimetable, setOnboarded, DAYS, DAY_LABELS } from '../utils/storage';
+import { parseTimetableFile } from '../utils/visionHandler';
 import avatar1 from '../assets/avatars/avatar1.png';
 import avatar2 from '../assets/avatars/avatar2.png';
 import avatar3 from '../assets/avatars/avatar3.png';
@@ -20,6 +21,8 @@ export default function OnboardingPage() {
     const navigate = useNavigate();
     const user = getUser();
     const [step, setStep] = useState(1);
+    const [isParsing, setIsParsing] = useState(false);
+    const fileInputRef = useRef(null);
 
     // Step 1: Personal info
     const [name, setName] = useState(user?.name || '');
@@ -71,6 +74,34 @@ export default function OnboardingPage() {
             ...prev,
             [day]: prev[day].map((s, i) => i === idx ? { ...s, [field]: value } : s)
         }));
+    }
+
+    async function handleFileUpload(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsParsing(true);
+            const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+            const data = await parseTimetableFile(file, apiKey);
+
+            if (data.courses && data.timetable) {
+                setCourses(data.courses);
+                setTimetable(data.timetable);
+                // Optionally jump to next step if they upload in step 2
+                // We will just let them review it first.
+            } else {
+                alert("AI couldn't extract a valid timetable. Please check the file and try again.");
+            }
+        } catch (error) {
+            console.error("Timetable parse error:", error);
+            alert("Error parsing timetable: " + error.message);
+        } finally {
+            setIsParsing(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+        }
     }
 
     function handleNext() {
@@ -163,6 +194,26 @@ export default function OnboardingPage() {
                             <h2 className="onb-title">Your Courses 📚</h2>
                             <p className="onb-sub">Step 2 of 3 — Add courses you're pursuing</p>
                             <span className="hd-underline hd-mb-lg" />
+
+                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20, background: 'var(--bg)', padding: 16, borderRadius: 'var(--radius-wobbly-alt)', border: '2px dashed var(--muted)' }}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <p style={{ fontSize: 13, marginBottom: 12 }}><strong>Pro Tip:</strong> Upload your timetable image or PDF to auto-fill courses and schedule instantly!</p>
+                                    <input
+                                        type="file"
+                                        accept=".pdf, image/png, image/jpeg, image/jpg, image/webp"
+                                        style={{ display: 'none' }}
+                                        ref={fileInputRef}
+                                        onChange={handleFileUpload}
+                                    />
+                                    <button 
+                                        className="hd-btn hd-btn--sm" 
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isParsing}
+                                    >
+                                        {isParsing ? "Scanning... ⏳" : "Upload Timetable ✨"}
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="onb-courses-list">
                                 {courses.map((c, i) => (
